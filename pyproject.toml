@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astel-video-editor"
+version = "0.1.0"
+description = "Local-first rough-cut automation for short-form video"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "opencv-python-headless>=4.10",
+]
+
+[project.optional-dependencies]
+scenes = ["scenedetect>=0.7.1"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+video-editor = "video_editor.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
