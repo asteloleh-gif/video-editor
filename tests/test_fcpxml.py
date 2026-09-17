@@ -7,7 +7,7 @@ from video_editor.probe import MediaInfo
 
 
 def _plan(tmp_path):
-    source = tmp_path / "raw.mov"
+    source = tmp_path / "raw clip.mov"
     source.write_bytes(b"")
     info = MediaInfo(
         path=str(source),
@@ -39,13 +39,22 @@ def test_write_fcpxml_creates_resolve_timeline(tmp_path):
     assert '<!DOCTYPE fcpxml>' in text
     root = ET.fromstring(text.split("<!DOCTYPE fcpxml>\n", 1)[1])
     assert root.tag == "fcpxml"
-    assert root.attrib["version"] == "1.9"
+    assert root.attrib["version"] == "1.10"
 
     format_node = root.find("./resources/format")
     assert format_node is not None
     assert format_node.attrib["width"] == "1080"
     assert format_node.attrib["height"] == "1920"
     assert format_node.attrib["frameDuration"] == "1/30s"
+
+    asset = root.find("./resources/asset")
+    assert asset is not None
+    assert asset.attrib["src"].startswith("file://")
+    assert "%20" in asset.attrib["src"]
+
+    sequence = root.find("./library/event/project/sequence")
+    assert sequence is not None
+    assert sequence.attrib["duration"] == "7/2s"
 
     clips = root.findall("./library/event/project/sequence/spine/asset-clip")
     assert len(clips) == 2
