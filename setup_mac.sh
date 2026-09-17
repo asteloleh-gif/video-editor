@@ -12,11 +12,15 @@ if ! command -v ffmpeg >/dev/null 2>&1; then
   brew install ffmpeg
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
-  brew install python
+PYTHON_BIN="$(brew --prefix python@3.11)/bin/python3.11"
+if [ ! -x "$PYTHON_BIN" ]; then
+  brew install python@3.11
+  PYTHON_BIN="$(brew --prefix python@3.11)/bin/python3.11"
 fi
 
-python3 -m venv .venv
+"$PYTHON_BIN" --version
+rm -rf .venv
+"$PYTHON_BIN" -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
