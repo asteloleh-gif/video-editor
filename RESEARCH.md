@@ -36,6 +36,19 @@ License: Apache-2.0 with NOTICE/attribution requirements.
 Role: DaVinci Resolve automation. Live scripting requires Studio; interchange/FCPXML workflows can support Resolve Free.
 Decision: candidate final-review bridge. If code is copied or redistributed, preserve Apache NOTICE/attribution. Prefer invoking/integrating as a separate adapter.
 
+### emircbngl/davinci-resolve-mcp-free
+License: MIT.
+Role: current proof that Resolve Free can be automated usefully through three non-Studio channels: FCPXML/OTIO interchange, generated Lua snippets, and macOS Accessibility/UI automation.
+Decision: validate the same architecture in our own smaller pipeline. We do not need its MCP server for V0, but the project strongly supports using FCPXML as the stable data plane and Accessibility only as a convenience layer.
+
+### video-timeline-copilot
+Role: transcript-first timeline workflow with JSON EDL, FCPXML, preview QA and Resolve handoff.
+Decision: useful reference for a round-trip architecture where the machine-generated edit plan remains the source of truth and the NLE is a review/finalization surface.
+
+### steele_fcpxml / FCPXML tooling
+Role: narrow programmatic bridge from clip ranges to NLE timelines.
+Decision: confirms the desired separation: analysis decides ranges; FCPXML carries them into Resolve; Resolve handles titles/color/audio polish.
+
 ### Relo-video/SynthCut
 License: GPL-3.0-or-later.
 Role: broad AI-native editor/MCP with many tools.
@@ -44,6 +57,21 @@ Decision: research/reference only for this repository. Do not merge its source i
 ### montage-ai / other long-to-shorts projects
 Role: useful reference for OTIO/EDL, captions, reframing, beat workflows.
 Decision: not required for V0. Most are optimized for dialogue/podcast footage rather than simple family/action challenges.
+
+## DaVinci Resolve Free decision
+
+Blackmagic currently documents Python/Lua scripting, developer APIs, workflow integrations and remote scripting as Studio features. Therefore the core project must not depend on `DaVinciResolveScript`.
+
+The Free-compatible bridge is:
+
+1. Analyze original RAW locally.
+2. Keep the JSON edit plan as the source of truth.
+3. Render a flattened rough MP4 for quick review.
+4. Export the same keep ranges as an FCPXML 1.9 timeline referencing the original RAW.
+5. Import that timeline into Resolve Free.
+6. On macOS, optionally automate the import UI through Accessibility. Resolve 21 exposes timeline import via Shift-Command-I, so this can be driven without a Studio API.
+
+The Accessibility layer is deliberately optional because UI automation is more brittle than interchange files. If it fails, the FCPXML remains a normal manual import artifact.
 
 ## Resulting architecture
 
@@ -62,10 +90,12 @@ RAW MEDIA
         JSON edit plan
           /       \
          v         v
-   FFmpeg render   future Resolve/FCPXML adapter
-         |
-         v
-     rough cut
+   FFmpeg render   FCPXML 1.9 timeline
+         |              |
+         v              v
+     rough MP4     DaVinci Resolve Free
+                         |
+                         +--> optional macOS Accessibility auto-import
 ```
 
 ## Next intelligence layer
