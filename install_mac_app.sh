@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "=== Video Editor.app installer ==="
+
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$HOME/Applications"
 APP_PATH="$APP_DIR/Video Editor.app"
@@ -31,7 +33,7 @@ on processVideo(inputPath)
     set outputDir to projectDir & "/output"
 
     set baseName to do shell script "/usr/bin/basename " & quoted form of inputPath
-    set stemName to do shell script "/bin/echo " & quoted form of baseName & " | /usr/bin/sed -E 's/\\.[^.]+$//'"
+    set stemName to do shell script "/bin/echo " & quoted form of baseName & " | /usr/bin/sed -E 's/[.][^.]+$//'"
     set outputPath to outputDir & "/" & stemName & "_rough.mp4"
 
     set shellCmd to "export PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin; " & ¬
@@ -55,5 +57,5 @@ osacompile -o "$APP_PATH" "$TMP_SCRIPT"
 rm -f "$TMP_SCRIPT"
 
 echo "Installed: $APP_PATH"
-echo "Open it from Finder > Applications, Spotlight, or drag it to the Dock."
+echo "Open it from Spotlight or ~/Applications."
 echo "You can also drag a video directly onto the app icon."
