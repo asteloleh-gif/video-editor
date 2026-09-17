@@ -27,6 +27,29 @@ python -m pip install -e .
 
 mkdir -p input output
 
+CONFIG_DIR="$HOME/.config/video-editor"
+KEY_FILE="$CONFIG_DIR/openai_api_key"
+mkdir -p "$CONFIG_DIR"
+chmod 700 "$CONFIG_DIR"
+
+if [ ! -s "$KEY_FILE" ] && [ -n "${OPENAI_API_KEY:-}" ]; then
+  printf '%s\n' "$OPENAI_API_KEY" > "$KEY_FILE"
+  chmod 600 "$KEY_FILE"
+  echo "Saved OPENAI_API_KEY for Video Editor.app."
+elif [ ! -s "$KEY_FILE" ] && [ -t 0 ]; then
+  echo
+  echo "Vision mode needs an OpenAI API key."
+  read -r -s -p "Paste OPENAI_API_KEY (hidden; Enter to skip): " API_KEY_INPUT
+  echo
+  if [ -n "$API_KEY_INPUT" ]; then
+    printf '%s\n' "$API_KEY_INPUT" > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+    echo "Saved key to $KEY_FILE"
+  else
+    echo "Skipped API key. Vision mode will not run until a key is configured."
+  fi
+fi
+
 echo
 echo "Setup complete."
 echo "Run:"
