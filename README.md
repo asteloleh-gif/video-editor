@@ -1,86 +1,121 @@
 # video-editor
 
-Local-first automation for short-form video editing.
+AI-assisted automation for Battle Box / short-form challenge video.
 
-The project is intentionally built as an **orchestrator**, not another giant NLE. It combines deterministic media tooling with optional AI layers so raw footage can become a reviewable rough cut with minimal manual work.
+The project is an **orchestrator**, not another NLE. FFmpeg remains the deterministic renderer; the semantic layer decides what gameplay is worth keeping.
 
-## V0 goal
+## V1 pipeline
 
-`RAW -> motion/audio analysis -> keep/cut plan -> FFmpeg render -> JSON report + DaVinci timeline`
+```text
+RAW video
+  -> sample chronological frames
+  -> GPT vision event detection
+  -> KEEP intervals (attempt/result/reaction)
+  -> deterministic padding + merge
+  -> FFmpeg render
+  -> MP4 + JSON edit plan
+```
 
-The first version is optimized for simple challenge/action footage shot on a mostly static camera. It does **not** try to understand the game yet. That comes in the event-classification layer.
+The old motion/audio detector is still available as a fallback, but it is no longer the default because motion and sound alone cannot understand whether a person is actually playing, resetting cups, retrieving a ball, or simply standing in frame.
 
-## Why this architecture
+## What vision mode keeps
 
-A deep search of current open-source video tooling found several useful building blocks, but none matched the full requirement cleanly:
+The semantic prompt is tuned for fixed-camera physical challenge footage.
 
-- FFmpeg: final deterministic media engine.
-- Auto-Editor: excellent audio/motion first-pass and editor exports; optional reference/adapter, not required by the native pipeline.
-- PySceneDetect: scene-boundary detection for footage with actual shot changes.
-- AI Video Editor by timkulbaev: useful reference for structured CLI/MCP, VAD/Whisper and Apple Silicon encoding.
-- MakeMyClip Editor: strong MIT local/MCP deterministic editing layer.
-- davinci-resolve-mcp-free: proof of the Resolve Free pattern — interchange files + macOS Accessibility instead of Studio scripting.
-- unofficial-davinci-mcp: useful Apache-2.0 path for DaVinci workflows, including interchange for Resolve Free.
-- SynthCut: impressive AI-native/MCP editor, but GPL-3.0, so we do not merge its source into this project.
+**Keep:** final preparation immediately before an attempt, gameplay/throws, immediate result, short reaction.
 
-See `RESEARCH.md` for the integration decisions.
+**Cut:** waiting, walking into position, long hesitation, retrieving items, rebuilding/resetting props, camera adjustment, empty scene and unrelated setup.
+
+The default model is `gpt-5.6-luna`, using low-detail sampled frames. The default sample interval is 1 second. For a harder clip, use `--vision-step 0.5`.
+
+## Setup on Mac
+
+```bash
+git pull
+bash setup_mac.sh
+```
+
+`setup_mac.sh` installs the Python/OpenAI dependencies and, if needed, asks once for `OPENAI_API_KEY`. The key is stored locally at:
+
+```text
+~/.config/video-editor/openai_api_key
+```
+
+It is not stored in the repository.
+
+Check the installation:
+
+```bash
+source .venv/bin/activate
+video-editor doctor
+```
 
 ## Commands
 
+Vision is now the default:
+
 ```bash
-video-editor doctor
 video-editor analyze input.mov
 video-editor process input.mov -o output.mp4
-video-editor process input.mov -o output.mp4 --resolve
-video-editor resolve input.mov -o output.fcpxml --open-resolve
-video-editor batch ./input --output-dir ./output --resolve
 ```
 
-`--resolve` writes an FCPXML 1.9 timeline referencing the original RAW. It is intended for DaVinci Resolve Free, so the rough cut remains editable instead of arriving only as a flattened MP4.
+More temporal precision:
+
+```bash
+video-editor process input.mov -o output.mp4 --vision-step 0.5
+```
+
+Legacy detector for comparison:
+
+```bash
+video-editor process input.mov -o output.mp4 --mode hybrid
+```
+
+DaVinci/FCPXML remains available when an editable timeline is actually needed:
+
+```bash
+video-editor process input.mov -o output.mp4 --resolve
+video-editor resolve input.mov -o output.fcpxml --open-resolve
+```
 
 ## Mac app
 
-After `setup_mac.sh`, install the no-terminal wrapper:
+After setup:
 
 ```bash
 bash install_mac_app.sh
 ```
 
-Then open `Video Editor.app` from Spotlight or drag a RAW video onto it.
-
-Each run creates:
+Then open `Video Editor.app` from Spotlight or drag a RAW video onto it. The app now runs the semantic AI cut directly and creates:
 
 ```text
 output/<name>_rough.mp4
 output/<name>_rough.plan.json
-output/<name>_rough.fcpxml
 ```
 
-The app offers three handoff modes:
+DaVinci is no longer part of the normal app workflow. The finished rough cut can be reviewed or sent to a mobile editor for text/music/graphics.
 
-- **Show Files** — reveal the rough cut.
-- **Open DaVinci** — launch Resolve and reveal the FCPXML.
-- **Auto Import** — experimental macOS Accessibility automation: launch Resolve, trigger timeline import, select the generated FCPXML, and accept the import dialog.
+## Edit-plan diagnostics
 
-`Auto Import` does not use the Studio scripting API. macOS may require Accessibility permission for `Video Editor.app`. If UI automation fails, the FCPXML remains usable through normal Resolve timeline import.
+Every render gets a JSON plan. Vision plans include:
+
+- final `keep` intervals;
+- raw `vision_intervals`;
+- model detections with confidence;
+- one short semantic summary per analyzed batch;
+- total duration kept/removed.
+
+This makes the next tuning cycle measurable: compare the AI intervals with a human edit instead of guessing at motion thresholds.
 
 ## Local stack
 
 - Python 3.11+
 - FFmpeg / ffprobe
-- OpenCV + NumPy for lightweight local motion analysis
-- FCPXML 1.9 interchange for Resolve Free
-- optional macOS Accessibility automation
-- later: vision event classifier + MCP
-
-## Event grammar planned for V1
-
-```text
-READY -> ATTEMPT -> RESULT(FAIL|SCORE) -> REACTION -> RESET
-```
-
-The editor will learn these generic events instead of being hard-coded to a specific game.
+- OpenCV for deterministic frame sampling
+- OpenAI Responses API for semantic vision classification
+- JSON edit plan for debugging and evaluation
+- optional FCPXML 1.9 handoff to DaVinci Resolve Free
 
 ## Status
 
-V0 rough-cut core is working. Resolve Free timeline handoff is the current integration layer.
+**V1 semantic detector implemented.** The next validation target is one RAW Battle Box clip plus the user's manual cut as ground truth. We compare timestamps, then tune sampling/prompt/padding before building the iPhone -> Mac -> iPhone handoff.
