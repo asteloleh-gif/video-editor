@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astel-video-editor"
-version = "0.1.0"
-description = "Local-first rough-cut automation for short-form video"
+version = "0.2.0"
+description = "AI-assisted rough-cut automation for short-form challenge video"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.0",
   "opencv-python-headless>=4.10",
+  "openai>=1.68",
 ]
 
 [project.optional-dependencies]
