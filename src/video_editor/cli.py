@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -9,20 +10,28 @@ from pathlib import Path
 from .fcpxml import write_fcpxml
 from .pipeline import analyze, process, save_plan
 from .probe import executable
+from .vision import DEFAULT_MODEL
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".mkv"}
 
 
 def _add_analysis_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--mode", choices=["hybrid", "motion", "audio"], default="hybrid")
+    parser.add_argument("--mode", choices=["vision", "hybrid", "motion", "audio"], default="vision")
     parser.add_argument("--motion-threshold", type=float, default=0.018)
     parser.add_argument("--sample-fps", type=float, default=4.0)
     parser.add_argument("--audio-noise-db", type=float, default=-35.0)
     parser.add_argument("--min-silence", type=float, default=0.35)
     parser.add_argument("--merge-gap", type=float, default=0.70)
-    parser.add_argument("--margin-before", type=float, default=0.25)
+    parser.add_argument("--margin-before", type=float, default=0.35)
     parser.add_argument("--margin-after", type=float, default=0.90)
     parser.add_argument("--min-segment", type=float, default=0.15)
+    parser.add_argument("--vision-model", default=DEFAULT_MODEL)
+    parser.add_argument("--vision-step", type=float, default=1.0, help="Seconds between sampled frames")
+    parser.add_argument("--vision-batch-frames", type=int, default=20)
+    parser.add_argument("--vision-overlap-frames", type=int, default=3)
+    parser.add_argument("--vision-max-width", type=int, default=480)
+    parser.add_argument("--vision-min-confidence", type=float, default=0.45)
+    parser.add_argument("--vision-merge-gap", type=float, default=1.25)
 
 
 def _analysis_options(args: argparse.Namespace) -> dict:
@@ -36,6 +45,13 @@ def _analysis_options(args: argparse.Namespace) -> dict:
         "margin_before": args.margin_before,
         "margin_after": args.margin_after,
         "min_segment": args.min_segment,
+        "vision_model": args.vision_model,
+        "vision_step": args.vision_step,
+        "vision_batch_frames": args.vision_batch_frames,
+        "vision_overlap_frames": args.vision_overlap_frames,
+        "vision_max_width": args.vision_max_width,
+        "vision_min_confidence": args.vision_min_confidence,
+        "vision_merge_gap": args.vision_merge_gap,
     }
 
 
@@ -63,9 +79,26 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     except Exception:
         checks["opencv"] = False
 
+    try:
+        import openai  # noqa: F401
+        checks["openai_sdk"] = True
+    except Exception:
+        checks["openai_sdk"] = False
+
+    key_file = Path.home() / ".config" / "video-editor" / "openai_api_key"
+    checks["openai_api_key"] = bool(os.getenv("OPENAI_API_KEY", "").strip()) or (
+        key_file.exists() and bool(key_file.read_text(encoding="utf-8").strip())
+    )
+
     print(json.dumps(checks, indent=2))
-    required_ok = checks["ffmpeg"] and checks["ffprobe"] and checks["opencv"]
-    print("\nV0 core: " + ("OK" if required_ok else "MISSING DEPENDENCIES"))
+    required_ok = (
+        checks["ffmpeg"]
+        and checks["ffprobe"]
+        and checks["opencv"]
+        and checks["openai_sdk"]
+        and checks["openai_api_key"]
+    )
+    print("\nV1 vision core: " + ("OK" if required_ok else "MISSING DEPENDENCIES OR API KEY"))
     return 0 if required_ok else 1
 
 
@@ -85,6 +118,7 @@ def cmd_process(args: argparse.Namespace) -> int:
     plan = process(source, output, **_analysis_options(args))
     payload = {
         "status": "complete",
+        "mode": plan.mode,
         "input": str(source.resolve()),
         "output": str(output.resolve()),
         "duration_original_sec": plan.source.duration,
@@ -92,6 +126,7 @@ def cmd_process(args: argparse.Namespace) -> int:
         "duration_removed_sec": plan.duration_removed,
         "percent_removed": plan.percent_removed,
         "segments_kept": len(plan.keep),
+        "vision_detections": len(plan.vision_detections),
     }
     if args.resolve:
         timeline = Path(args.resolve_output).expanduser() if args.resolve_output else output.with_suffix(".fcpxml")
@@ -154,10 +189,10 @@ def cmd_batch(args: argparse.Namespace) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="video-editor", description="Local-first short-form rough-cut pipeline")
+    parser = argparse.ArgumentParser(prog="video-editor", description="AI-assisted short-form rough-cut pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    doctor = sub.add_parser("doctor", help="Check dependencies")
+    doctor = sub.add_parser("doctor", help="Check dependencies and vision configuration")
     doctor.set_defaults(func=cmd_doctor)
 
     analyze_parser = sub.add_parser("analyze", help="Create an edit plan without rendering")
