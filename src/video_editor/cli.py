@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
+import subprocess
 import sys
 from pathlib import Path
 
+from .fcpxml import write_fcpxml
 from .pipeline import analyze, process, save_plan
 from .probe import executable
 
@@ -36,6 +37,17 @@ def _analysis_options(args: argparse.Namespace) -> dict:
         "margin_after": args.margin_after,
         "min_segment": args.min_segment,
     }
+
+
+def _open_resolve() -> None:
+    if sys.platform != "darwin":
+        return
+    subprocess.run(["open", "-a", "DaVinci Resolve"], check=False)
+
+
+def _reveal(path: Path) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["open", "-R", str(path.resolve())], check=False)
 
 
 def cmd_doctor(_: argparse.Namespace) -> int:
@@ -71,7 +83,7 @@ def cmd_process(args: argparse.Namespace) -> int:
     source = Path(args.video).expanduser()
     output = Path(args.output).expanduser() if args.output else Path("output") / f"{source.stem}_rough.mp4"
     plan = process(source, output, **_analysis_options(args))
-    print(json.dumps({
+    payload = {
         "status": "complete",
         "input": str(source.resolve()),
         "output": str(output.resolve()),
@@ -80,7 +92,40 @@ def cmd_process(args: argparse.Namespace) -> int:
         "duration_removed_sec": plan.duration_removed,
         "percent_removed": plan.percent_removed,
         "segments_kept": len(plan.keep),
-    }, indent=2))
+    }
+    if args.resolve:
+        timeline = Path(args.resolve_output).expanduser() if args.resolve_output else output.with_suffix(".fcpxml")
+        write_fcpxml(plan, timeline, project_name=f"{source.stem}_rough")
+        payload["resolve_timeline"] = str(timeline.resolve())
+        if args.open_resolve:
+            _open_resolve()
+            _reveal(timeline)
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def cmd_resolve(args: argparse.Namespace) -> int:
+    source = Path(args.video).expanduser()
+    output = Path(args.output).expanduser() if args.output else Path("output") / f"{source.stem}_rough.fcpxml"
+    plan = analyze(source, **_analysis_options(args))
+    write_fcpxml(
+        plan,
+        output,
+        project_name=args.project_name or f"{source.stem}_rough",
+        width=args.width,
+        height=args.height,
+    )
+    payload = {
+        "status": "complete",
+        "input": str(source.resolve()),
+        "resolve_timeline": str(output.resolve()),
+        "segments_kept": len(plan.keep),
+        "duration_kept_sec": plan.duration_kept,
+    }
+    if args.open_resolve:
+        _open_resolve()
+        _reveal(output)
+    print(json.dumps(payload, indent=2))
     return 0
 
 
@@ -97,7 +142,10 @@ def cmd_batch(args: argparse.Namespace) -> int:
     for index, source in enumerate(videos, start=1):
         print(f"[{index}/{len(videos)}] {source.name}")
         try:
-            process(source, output_dir / f"{source.stem}_rough.mp4", **_analysis_options(args))
+            output = output_dir / f"{source.stem}_rough.mp4"
+            plan = process(source, output, **_analysis_options(args))
+            if args.resolve:
+                write_fcpxml(plan, output_dir / f"{source.stem}_rough.fcpxml")
         except Exception as exc:
             failures += 1
             print(f"ERROR: {exc}", file=sys.stderr)
@@ -121,12 +169,26 @@ def main() -> None:
     process_parser = sub.add_parser("process", help="Analyze and render one rough cut")
     process_parser.add_argument("video")
     process_parser.add_argument("-o", "--output")
+    process_parser.add_argument("--resolve", action="store_true", help="Also write an FCPXML timeline for DaVinci Resolve Free")
+    process_parser.add_argument("--resolve-output", help="Optional FCPXML output path")
+    process_parser.add_argument("--open-resolve", action="store_true", help="Launch Resolve and reveal the generated FCPXML")
     _add_analysis_args(process_parser)
     process_parser.set_defaults(func=cmd_process)
+
+    resolve_parser = sub.add_parser("resolve", help="Analyze and export an FCPXML timeline for DaVinci Resolve Free")
+    resolve_parser.add_argument("video")
+    resolve_parser.add_argument("-o", "--output")
+    resolve_parser.add_argument("--project-name")
+    resolve_parser.add_argument("--width", type=int, default=1080)
+    resolve_parser.add_argument("--height", type=int, default=1920)
+    resolve_parser.add_argument("--open-resolve", action="store_true")
+    _add_analysis_args(resolve_parser)
+    resolve_parser.set_defaults(func=cmd_resolve)
 
     batch_parser = sub.add_parser("batch", help="Process a folder")
     batch_parser.add_argument("folder", nargs="?", default="input")
     batch_parser.add_argument("--output-dir", default="output")
+    batch_parser.add_argument("--resolve", action="store_true", help="Also write FCPXML timelines")
     _add_analysis_args(batch_parser)
     batch_parser.set_defaults(func=cmd_batch)
 
