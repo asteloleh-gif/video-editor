@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from .audio import detect_audio_activity
@@ -19,13 +19,13 @@ class EditPlan:
     keep: list[Interval]
     motion_intervals: list[Interval]
     audio_intervals: list[Interval]
-    vision_intervals: list[Interval]
-    vision_detections: list[VisionDetection]
-    vision_summaries: list[str]
     motion_samples: list[tuple[float, float]]
     duration_kept: float
     duration_removed: float
     percent_removed: float
+    vision_intervals: list[Interval] = field(default_factory=list)
+    vision_detections: list[VisionDetection] = field(default_factory=list)
+    vision_summaries: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -140,13 +140,13 @@ def analyze(
         keep=keep,
         motion_intervals=motion_intervals,
         audio_intervals=audio_intervals,
-        vision_intervals=vision_intervals,
-        vision_detections=vision_detections,
-        vision_summaries=vision_summaries,
         motion_samples=motion_samples,
         duration_kept=kept,
         duration_removed=removed,
         percent_removed=percent,
+        vision_intervals=vision_intervals,
+        vision_detections=vision_detections,
+        vision_summaries=vision_summaries,
     )
 
 
