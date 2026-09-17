@@ -32,13 +32,19 @@ def _frame_duration(fps: Fraction) -> Fraction:
     return Fraction(fps.denominator, fps.numerator)
 
 
-def _fcpx_time(seconds: float, fps: Fraction) -> str:
-    frame = _frame_duration(fps)
-    frames = max(0, round(float(seconds) / float(frame)))
-    value = frames * frame
+def _frame_count(seconds: float, fps: Fraction) -> int:
+    return max(0, round(float(seconds) * float(fps)))
+
+
+def _fcpx_frames(frames: int, fps: Fraction) -> str:
+    value = max(0, int(frames)) * _frame_duration(fps)
     if value.denominator == 1:
         return f"{value.numerator}s"
     return f"{value.numerator}/{value.denominator}s"
+
+
+def _fcpx_time(seconds: float, fps: Fraction) -> str:
+    return _fcpx_frames(_frame_count(seconds, fps), fps)
 
 
 def write_fcpxml(
@@ -49,10 +55,11 @@ def write_fcpxml(
     width: int = 1080,
     height: int = 1920,
 ) -> Path:
-    """Write a simple, frame-aligned FCPXML rough-cut timeline for Resolve Free.
+    """Write a frame-aligned FCPXML timeline for DaVinci Resolve Free.
 
-    The timeline references the original source media and lays each keep interval
-    back-to-back on the primary storyline. No Resolve scripting API is needed.
+    The timeline references the original RAW and lays each keep interval
+    back-to-back on the primary storyline. No Resolve Studio scripting API is
+    required. FCPXML is the stable bridge; UI automation is only a convenience.
     """
     source = Path(plan.source.path).expanduser().resolve()
     target = Path(output).expanduser().resolve()
@@ -67,7 +74,15 @@ def write_fcpxml(
     )
     name = project_name or f"{source.stem}_rough"
 
-    root = ET.Element("fcpxml", {"version": "1.9"})
+    clips: list[tuple[int, int, int]] = []
+    timeline_frames = 0
+    for interval in plan.keep:
+        start_frames = _frame_count(interval.start, fps)
+        duration_frames = max(1, _frame_count(interval.end - interval.start, fps))
+        clips.append((timeline_frames, start_frames, duration_frames))
+        timeline_frames += duration_frames
+
+    root = ET.Element("fcpxml", {"version": "1.10"})
     resources = ET.SubElement(root, "resources")
     ET.SubElement(
         resources,
@@ -78,13 +93,13 @@ def write_fcpxml(
             "frameDuration": frame_duration_text,
             "width": str(width),
             "height": str(height),
-            "colorSpace": "1-1-1 (Rec. 709)",
         },
     )
 
     asset_attrs = {
         "id": "r2",
-        "name": source.name,
+        "name": source.stem,
+        "src": source.as_uri(),
         "start": "0s",
         "duration": _fcpx_time(plan.source.duration, fps),
         "hasVideo": "1",
@@ -92,11 +107,7 @@ def write_fcpxml(
     }
     if plan.source.has_audio:
         asset_attrs["hasAudio"] = "1"
-        asset_attrs["audioSources"] = "1"
-        asset_attrs["audioChannels"] = "2"
-        asset_attrs["audioRate"] = "48k"
-    asset = ET.SubElement(resources, "asset", asset_attrs)
-    ET.SubElement(asset, "media-rep", {"kind": "original-media", "src": source.as_uri()})
+    ET.SubElement(resources, "asset", asset_attrs)
 
     library = ET.SubElement(root, "library")
     event = ET.SubElement(library, "event", {"name": "Video Editor"})
@@ -106,7 +117,7 @@ def write_fcpxml(
         "sequence",
         {
             "format": "r1",
-            "duration": _fcpx_time(plan.duration_kept, fps),
+            "duration": _fcpx_frames(timeline_frames, fps),
             "tcStart": "0s",
             "tcFormat": "NDF",
             "audioLayout": "stereo",
@@ -115,19 +126,19 @@ def write_fcpxml(
     )
     spine = ET.SubElement(sequence, "spine")
 
-    timeline_offset = 0.0
-    for index, interval in enumerate(plan.keep, start=1):
-        duration = max(0.0, interval.end - interval.start)
-        attrs = {
-            "name": f"keep_{index:03d}",
-            "ref": "r2",
-            "offset": _fcpx_time(timeline_offset, fps),
-            "start": _fcpx_time(interval.start, fps),
-            "duration": _fcpx_time(duration, fps),
-            "format": "r1",
-        }
-        ET.SubElement(spine, "asset-clip", attrs)
-        timeline_offset += duration
+    for index, (offset_frames, start_frames, duration_frames) in enumerate(clips, start=1):
+        ET.SubElement(
+            spine,
+            "asset-clip",
+            {
+                "name": f"keep_{index:03d}",
+                "ref": "r2",
+                "offset": _fcpx_frames(offset_frames, fps),
+                "start": _fcpx_frames(start_frames, fps),
+                "duration": _fcpx_frames(duration_frames, fps),
+                "lane": "0",
+            },
+        )
 
     ET.indent(root, space="  ")
     xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE fcpxml>\n' + ET.tostring(root, encoding="unicode")
