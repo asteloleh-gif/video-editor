@@ -27,6 +27,30 @@ on open droppedItems
     end repeat
 end open
 
+on autoImportResolve(timelinePath)
+    do shell script "/usr/bin/open -a 'DaVinci Resolve'"
+    delay 4
+    tell application "DaVinci Resolve" to activate
+    delay 1
+    set the clipboard to timelinePath
+    tell application "System Events"
+        -- Resolve 21: File > Import Timeline uses Shift-Command-I.
+        keystroke "i" using {shift down, command down}
+        delay 1
+        -- macOS file chooser: jump directly to the exact FCPXML path.
+        keystroke "g" using {shift down, command down}
+        delay 0.5
+        keystroke "v" using {command down}
+        delay 0.3
+        key code 36
+        delay 0.8
+        key code 36
+        delay 2
+        -- Accept Resolve's Load XML dialog with its current/default settings.
+        key code 36
+    end tell
+end autoImportResolve
+
 on processVideo(inputPath)
     set projectDir to "${PROJECT_DIR}"
     set editorBin to projectDir & "/.venv/bin/video-editor"
@@ -47,8 +71,11 @@ on processVideo(inputPath)
             do shell script shellCmd
         end timeout
         display notification "Rough cut + Resolve timeline ready" with title "Video Editor"
-        set resultDialog to display dialog "Done. Rough cut and DaVinci timeline are ready." buttons {"Show Files", "Open DaVinci"} default button "Open DaVinci" with icon note
-        if button returned of resultDialog is "Open DaVinci" then
+        set resultDialog to display dialog "Done. Rough cut and DaVinci timeline are ready." buttons {"Show Files", "Open DaVinci", "Auto Import"} default button "Auto Import" with icon note
+        set pickedButton to button returned of resultDialog
+        if pickedButton is "Auto Import" then
+            my autoImportResolve(timelinePath)
+        else if pickedButton is "Open DaVinci" then
             do shell script "/usr/bin/open -a 'DaVinci Resolve'"
             delay 2
             do shell script "/usr/bin/open -R " & quoted form of timelinePath
@@ -68,4 +95,5 @@ rm -f "$TMP_SCRIPT"
 echo "Installed: $APP_PATH"
 echo "Open it from Spotlight or ~/Applications."
 echo "You can also drag a video directly onto the app icon."
-echo "Each run now creates both *_rough.mp4 and *_rough.fcpxml for DaVinci Resolve Free."
+echo "Each run creates *_rough.mp4 + *_rough.fcpxml."
+echo "Auto Import is experimental and needs macOS Accessibility permission for Video Editor.app."
