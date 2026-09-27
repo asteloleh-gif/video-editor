@@ -8,8 +8,11 @@ import sys
 from pathlib import Path
 
 from .fcpxml import write_fcpxml
+from .final import create_short
 from .pipeline import analyze, process, save_plan
 from .probe import executable
+from .remotion_bridge import remotion_ready
+from .transcript import default_model_path, transcribe_video, whisper_binary, whisper_ready
 from .vision import DEFAULT_MODEL
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".m4v", ".mkv"}
@@ -66,12 +69,20 @@ def _reveal(path: Path) -> None:
         subprocess.run(["open", "-R", str(path.resolve())], check=False)
 
 
-def cmd_doctor(_: argparse.Namespace) -> int:
+def _open(path: Path) -> None:
+    if sys.platform == "darwin":
+        subprocess.run(["open", str(path.resolve())], check=False)
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
     checks = {
         "ffmpeg": executable("ffmpeg"),
         "ffprobe": executable("ffprobe"),
-        "auto-editor_optional": executable("auto-editor"),
-        "node_optional": executable("node"),
+        "node": executable("node"),
+        "whisper_cli": bool(whisper_binary()),
+        "whisper_model": default_model_path().is_file(),
+        "remotion": remotion_ready(),
+        "auto_editor_optional": executable("auto-editor"),
     }
     try:
         import cv2  # noqa: F401
@@ -90,16 +101,21 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         key_file.exists() and bool(key_file.read_text(encoding="utf-8").strip())
     )
 
-    print(json.dumps(checks, indent=2))
-    required_ok = (
-        checks["ffmpeg"]
-        and checks["ffprobe"]
-        and checks["opencv"]
-        and checks["openai_sdk"]
-        and checks["openai_api_key"]
-    )
-    print("\nV1 vision core: " + ("OK" if required_ok else "MISSING DEPENDENCIES OR API KEY"))
-    return 0 if required_ok else 1
+    core_keys = ["ffmpeg", "ffprobe", "opencv", "openai_sdk", "openai_api_key"]
+    full_keys = core_keys + ["node", "whisper_cli", "whisper_model", "remotion"]
+    core_ok = all(checks[key] for key in core_keys)
+    full_ok = all(checks[key] for key in full_keys)
+
+    payload = {
+        "checks": checks,
+        "core_ready": core_ok,
+        "full_autoeditor_ready": full_ok,
+        "whisper_model_path": str(default_model_path()),
+    }
+    print(json.dumps(payload, indent=2))
+    print("\nVision rough-cut core: " + ("OK" if core_ok else "MISSING DEPENDENCIES OR API KEY"))
+    print("Battle Box AutoEditor: " + ("OK" if full_ok else "PARTIAL — run setup_mac.sh"))
+    return 0 if (full_ok if args.full else core_ok) else 1
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
@@ -135,6 +151,46 @@ def cmd_process(args: argparse.Namespace) -> int:
         if args.open_resolve:
             _open_resolve()
             _reveal(timeline)
+    print(json.dumps(payload, indent=2))
+    return 0
+
+
+def cmd_create_short(args: argparse.Namespace) -> int:
+    source = Path(args.video).expanduser()
+    output = Path(args.output).expanduser() if args.output else Path("output") / f"{source.stem}_final.mp4"
+    result = create_short(
+        source,
+        output,
+        style_path=args.style,
+        use_whisper=not args.no_whisper,
+        require_whisper=args.require_whisper,
+        use_remotion=not args.no_remotion,
+        require_remotion=args.require_remotion,
+        whisper_model=args.whisper_model,
+        whisper_language=args.whisper_language,
+        **_analysis_options(args),
+    )
+    print(json.dumps({"status": "complete", **result.to_dict()}, indent=2))
+    if args.open:
+        _open(Path(result.final))
+    elif args.reveal:
+        _reveal(Path(result.final))
+    return 0
+
+
+def cmd_transcribe(args: argparse.Namespace) -> int:
+    result = transcribe_video(
+        args.video,
+        model_path=args.whisper_model,
+        language=args.whisper_language,
+        max_len=args.max_len,
+    )
+    payload = result.to_dict()
+    if args.output:
+        target = Path(args.output).expanduser().resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        payload["output"] = str(target)
     print(json.dumps(payload, indent=2))
     return 0
 
@@ -177,10 +233,19 @@ def cmd_batch(args: argparse.Namespace) -> int:
     for index, source in enumerate(videos, start=1):
         print(f"[{index}/{len(videos)}] {source.name}")
         try:
-            output = output_dir / f"{source.stem}_rough.mp4"
-            plan = process(source, output, **_analysis_options(args))
-            if args.resolve:
-                write_fcpxml(plan, output_dir / f"{source.stem}_rough.fcpxml")
+            if args.final:
+                create_short(
+                    source,
+                    output_dir / f"{source.stem}_final.mp4",
+                    use_whisper=not args.no_whisper,
+                    use_remotion=not args.no_remotion,
+                    **_analysis_options(args),
+                )
+            else:
+                output = output_dir / f"{source.stem}_rough.mp4"
+                plan = process(source, output, **_analysis_options(args))
+                if args.resolve:
+                    write_fcpxml(plan, output_dir / f"{source.stem}_rough.fcpxml")
         except Exception as exc:
             failures += 1
             print(f"ERROR: {exc}", file=sys.stderr)
@@ -189,10 +254,11 @@ def cmd_batch(args: argparse.Namespace) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="video-editor", description="AI-assisted short-form rough-cut pipeline")
+    parser = argparse.ArgumentParser(prog="video-editor", description="Battle Box AI short-form video editor")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    doctor = sub.add_parser("doctor", help="Check dependencies and vision configuration")
+    doctor = sub.add_parser("doctor", help="Check the local editing stack")
+    doctor.add_argument("--full", action="store_true", help="Require Whisper + Remotion in addition to the vision core")
     doctor.set_defaults(func=cmd_doctor)
 
     analyze_parser = sub.add_parser("analyze", help="Create an edit plan without rendering")
@@ -201,7 +267,7 @@ def main() -> None:
     _add_analysis_args(analyze_parser)
     analyze_parser.set_defaults(func=cmd_analyze)
 
-    process_parser = sub.add_parser("process", help="Analyze and render one rough cut")
+    process_parser = sub.add_parser("process", help="Analyze and render one clean rough cut")
     process_parser.add_argument("video")
     process_parser.add_argument("-o", "--output")
     process_parser.add_argument("--resolve", action="store_true", help="Also write an FCPXML timeline for DaVinci Resolve Free")
@@ -209,6 +275,29 @@ def main() -> None:
     process_parser.add_argument("--open-resolve", action="store_true", help="Launch Resolve and reveal the generated FCPXML")
     _add_analysis_args(process_parser)
     process_parser.set_defaults(func=cmd_process)
+
+    short_parser = sub.add_parser("create-short", help="RAW -> AI cut -> Whisper -> Remotion -> final short")
+    short_parser.add_argument("video")
+    short_parser.add_argument("-o", "--output")
+    short_parser.add_argument("--style", help="Style JSON; defaults to styles/battle_box.json")
+    short_parser.add_argument("--no-whisper", action="store_true")
+    short_parser.add_argument("--require-whisper", action="store_true")
+    short_parser.add_argument("--whisper-model")
+    short_parser.add_argument("--whisper-language", default="auto")
+    short_parser.add_argument("--no-remotion", action="store_true")
+    short_parser.add_argument("--require-remotion", action="store_true")
+    short_parser.add_argument("--open", action="store_true", help="Open the final MP4 after rendering")
+    short_parser.add_argument("--reveal", action="store_true", help="Reveal the final MP4 in Finder")
+    _add_analysis_args(short_parser)
+    short_parser.set_defaults(func=cmd_create_short)
+
+    transcript_parser = sub.add_parser("transcribe", help="Local Whisper transcription")
+    transcript_parser.add_argument("video")
+    transcript_parser.add_argument("-o", "--output")
+    transcript_parser.add_argument("--whisper-model")
+    transcript_parser.add_argument("--whisper-language", default="auto")
+    transcript_parser.add_argument("--max-len", type=int, default=42)
+    transcript_parser.set_defaults(func=cmd_transcribe)
 
     resolve_parser = sub.add_parser("resolve", help="Analyze and export an FCPXML timeline for DaVinci Resolve Free")
     resolve_parser.add_argument("video")
@@ -223,7 +312,10 @@ def main() -> None:
     batch_parser = sub.add_parser("batch", help="Process a folder")
     batch_parser.add_argument("folder", nargs="?", default="input")
     batch_parser.add_argument("--output-dir", default="output")
-    batch_parser.add_argument("--resolve", action="store_true", help="Also write FCPXML timelines")
+    batch_parser.add_argument("--final", action="store_true", help="Render full styled shorts instead of rough cuts")
+    batch_parser.add_argument("--no-whisper", action="store_true")
+    batch_parser.add_argument("--no-remotion", action="store_true")
+    batch_parser.add_argument("--resolve", action="store_true", help="Also write FCPXML timelines for rough-cut mode")
     _add_analysis_args(batch_parser)
     batch_parser.set_defaults(func=cmd_batch)
 
