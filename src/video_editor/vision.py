@@ -153,7 +153,7 @@ def _analyze_batch(
     try:
         from openai import OpenAI
     except ImportError as exc:
-        raise RuntimeError "Vision mode requires the 'openai' Python package. Run setup_mac.sh again." from exc
+        raise RuntimeError("Vision mode requires the 'openai' Python package. Run setup_mac.sh again.") from exc
 
     batch_start = frames[0][0]
     batch_end = frames[-1][0]
