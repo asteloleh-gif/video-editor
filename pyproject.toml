@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astel-video-editor"
-version = "0.3.0"
-description = "Battle Box AI short-form editor: semantic cuts, local Whisper captions and Remotion graphics"
+version = "0.4.0"
+description = "Battle Box AI short-form editor with FastAPI + Supabase learning backend"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.0",
@@ -15,10 +15,18 @@ dependencies = [
 
 [project.optional-dependencies]
 scenes = ["scenedetect>=0.7.1"]
-dev = ["pytest>=8.0"]
+api = [
+  "fastapi>=0.116",
+  "httpx>=0.28",
+  "uvicorn[standard]>=0.35",
+]
+dev = [
+  "pytest>=8.0",
+]
 
 [project.scripts]
 video-editor = "video_editor.cli:main"
+video-editor-api = "video_editor.api:run"
 
 [tool.setuptools.packages.find]
 where = ["src"]
