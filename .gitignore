@@ -10,3 +10,6 @@ output/
 *.m4v
 *.mkv
 *.jsonl
+remotion/node_modules/
+remotion/public/jobs/
+remotion/out/

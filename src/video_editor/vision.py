@@ -13,27 +13,28 @@ from .intervals import Interval, merge, normalize
 
 
 DEFAULT_MODEL = "gpt-5.6-luna"
+KEEP_LABELS = {"ready", "attempt", "score", "miss", "reaction"}
 
 VISION_INSTRUCTIONS = """You are the semantic rough-cut detector for Battle Box short-form challenge videos.
-The camera is usually fixed on a person, a table, cups, balls, or another simple physical challenge.
-Your only job is to identify the time ranges worth KEEPING in the final short.
+The camera is usually fixed on people, a table, cups, balls, dice, bottles, cards, or another simple physical challenge.
+Analyze the chronological frames as a game timeline and label visible event ranges.
 
-KEEP:
-- the final moment of preparation immediately before an attempt,
-- the actual attempt/gameplay (throws, hits, misses, balancing, movement that is part of the challenge),
-- the immediate visible result and short reaction.
+EVENT GRAMMAR:
+- ready: final preparation immediately before a real attempt
+- attempt: the actual throw / flip / hit / balance / race / gameplay action
+- score: a clearly visible successful result or hit
+- miss: a clearly visible failed attempt
+- reaction: immediate celebration, surprise, laugh, disappointment, or other short result reaction
+- reset: retrieving items, rebuilding props, moving back to the start position
+- dead: waiting, empty scene, unrelated setup, camera adjustment, long hesitation
 
-CUT:
-- walking into/out of position,
-- waiting, empty scene, long hesitation,
-- retrieving balls/items after the result,
-- rebuilding/resetting props for the next round,
-- adjusting camera/phone,
-- unrelated talking or setup that is not immediately part of an attempt.
+The final edit KEEPS ready, attempt, score, miss, and short reaction ranges.
+The final edit CUTS reset and dead ranges.
 
+Be conservative about score vs miss: only use them when the visible result is clear. If the result is ambiguous, label the action as attempt only.
 Prefer slightly too much footage over cutting through a real attempt. Do not invent action that is not visible.
 Timestamps are supplied with each sampled frame. Returned intervals must stay inside the batch time range.
-If the batch contains no clear challenge attempt, return an empty intervals array.
+If the batch contains no relevant activity, return an empty intervals array.
 """
 
 
@@ -121,7 +122,7 @@ def _response_schema() -> dict[str, Any]:
                         "end": {"type": "number"},
                         "label": {
                             "type": "string",
-                            "enum": ["attempt", "result", "reaction"],
+                            "enum": ["ready", "attempt", "score", "miss", "reaction", "reset", "dead"],
                         },
                         "confidence": {
                             "type": "number",
@@ -161,7 +162,7 @@ def _analyze_batch(
             "type": "input_text",
             "text": (
                 f"Analyze this chronological batch from {batch_start:.2f}s to {batch_end:.2f}s. "
-                "Each image is preceded by its exact timestamp. Return only ranges that should remain in the final edit."
+                "Each image is preceded by its exact timestamp. Label the visible game phases and results."
             ),
         }
     ]
@@ -183,7 +184,7 @@ def _analyze_batch(
         text={
             "format": {
                 "type": "json_schema",
-                "name": "battle_box_edit_ranges",
+                "name": "battle_box_game_events",
                 "schema": _response_schema(),
                 "strict": True,
             }
@@ -275,7 +276,7 @@ def detect_vision_activity(
             break
 
     intervals = normalize(
-        [Interval(item.start, item.end) for item in detections],
+        [Interval(item.start, item.end) for item in detections if item.label in KEEP_LABELS],
         duration=duration,
     )
     intervals = merge(intervals, max_gap=merge_gap)

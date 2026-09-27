@@ -1,0 +1,24 @@
+{
+  "name": "battle-box",
+  "accent": "#D7FF35",
+  "danger": "#FF5D5D",
+  "text": "#FFFFFF",
+  "panel": "rgba(8, 12, 10, 0.88)",
+  "shadow": "rgba(0, 0, 0, 0.55)",
+  "brand": "BATTLE BOX",
+  "show_brand": true,
+  "show_attempt_counter": true,
+  "show_score_counter": true,
+  "caption": {
+    "enabled": true,
+    "max_chars": 42,
+    "font_size": 64,
+    "bottom": 150
+  },
+  "event_badge": {
+    "enabled": true,
+    "font_size": 90,
+    "top": 180
+  },
+  "reaction_zoom": 1.045
+}
