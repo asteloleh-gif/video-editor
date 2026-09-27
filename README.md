@@ -259,3 +259,96 @@ RAW challenge clip + your manual final cut
 ```
 
 Compare the AI `keep` intervals against the human edit. Once cuts are consistently correct, tune graphics/SFX rather than changing the semantic core per video.
+
+
+## V0.4 FastAPI + Supabase learning backend
+
+The editor now has an optional API/control-plane layer. The media engine still runs locally or on a worker, while Supabase stores projects, source metadata, semantic events, render history, presets and user feedback.
+
+Install the API extras:
+
+```bash
+pip install -e ".[api]"
+```
+
+Configure environment variables from `.env.example`:
+
+```text
+SUPABASE_URL=https://jlmenuqcxtiwwjfnoupn.supabase.co
+SUPABASE_SECRET_KEY=<server-side secret only>
+HOST=0.0.0.0
+PORT=8000
+```
+
+Never expose a Supabase secret/service-role key to a browser or mobile client. It belongs only on the trusted backend/worker.
+
+Run the API:
+
+```bash
+video-editor-api
+```
+
+Health check:
+
+```text
+GET /health
+```
+
+Core endpoints:
+
+```text
+GET  /v1/presets
+POST /v1/projects
+GET  /v1/projects/{project_id}
+POST /v1/projects/{project_id}/sources
+POST /v1/projects/{project_id}/events
+POST /v1/projects/{project_id}/renders
+POST /v1/projects/{project_id}/feedback
+```
+
+A trusted render worker can also expose:
+
+```text
+POST /v1/projects/{project_id}/render-local
+```
+
+That endpoint is disabled by default. Enable it only on a trusted machine:
+
+```text
+VIDEO_EDITOR_ALLOW_LOCAL_RENDER=1
+VIDEO_EDITOR_MEDIA_ROOT=/data/battlebox
+```
+
+The API rejects render paths outside `VIDEO_EDITOR_MEDIA_ROOT`.
+
+### Learning loop
+
+The intended loop is now:
+
+```text
+RAW
+ -> Vision events
+ -> OLEH_STYLE preset
+ -> render
+ -> user KEEP/CUT/SHORTER/LONGER feedback
+ -> Supabase feedback table
+ -> future ranking model: P(user keeps this clip)
+```
+
+The initial Supabase schema contains:
+
+```text
+projects
+source_files
+events
+presets
+renders
+edits
+feedback
+```
+
+The first stored preset is `OLEH_STYLE v1`: 30-second target, speech removed, stronger goal/orange weighting, short reactions, preserved ball travel, impact transitions, goal SFX, and no "ORANGE GOAL" text.
+
+### Railway
+
+`railway.json` is included for the API service. The API itself can deploy before the heavy media worker. FFmpeg/Remotion/Whisper rendering should be deployed as a separate worker or kept on a trusted local machine until the media-runtime image is finalized.
