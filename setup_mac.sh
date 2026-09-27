@@ -36,8 +36,7 @@ mkdir -p "$CONFIG_DIR"
 chmod 700 "$CONFIG_DIR"
 
 if [ ! -s "$KEY_FILE" ] && [ -n "${OPENAI_API_KEY:-}" ]; then
-  printf '%s
-' "$OPENAI_API_KEY" > "$KEY_FILE"
+  printf '%s\\n' "$OPENAI_API_KEY" > "$KEY_FILE"
   chmod 600 "$KEY_FILE"
   echo "Saved OPENAI_API_KEY for Video Editor.app."
 elif [ ! -s "$KEY_FILE" ] && [ -t 0 ]; then
@@ -46,8 +45,7 @@ elif [ ! -s "$KEY_FILE" ] && [ -t 0 ]; then
   read -r -s -p "Paste OPENAI_API_KEY (hidden; Enter to skip): " API_KEY_INPUT
   echo
   if [ -n "$API_KEY_INPUT" ]; then
-    printf '%s
-' "$API_KEY_INPUT" > "$KEY_FILE"
+    printf '%s\\n' "$API_KEY_INPUT" > "$KEY_FILE"
     chmod 600 "$KEY_FILE"
     echo "Saved key to $KEY_FILE"
   else
@@ -64,7 +62,9 @@ if [ "${VIDEO_EDITOR_SKIP_WHISPER:-0}" != "1" ]; then
   mkdir -p "$WHISPER_DIR"
   if [ ! -s "$WHISPER_MODEL" ]; then
     echo "Downloading multilingual Whisper base model (~150 MB)..."
-    curl -fL --retry 3       "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"       -o "$WHISPER_MODEL.tmp"
+    curl -fL --retry 3 \\
+      "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin" \\
+      -o "$WHISPER_MODEL.tmp"
     mv "$WHISPER_MODEL.tmp" "$WHISPER_MODEL"
   fi
 else
