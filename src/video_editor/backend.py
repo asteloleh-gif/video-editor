@@ -198,5 +198,100 @@ class SupabaseRestClient:
     def update_render(self, render_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.update("renders", render_id, payload)
 
+    def add_edit(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.insert("edits", {"project_id": project_id, **payload})
+
     def add_feedback(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self.insert("feedback", {"project_id": project_id, **payload})
+
+    def list_project_events(
+        self,
+        project_id: str,
+        *,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "events",
+            filters={"project_id": f"eq.{project_id}"},
+            order="start_ms.asc",
+            limit=limit,
+        )
+
+    def get_events_by_ids(self, event_ids: list[str]) -> dict[str, dict[str, Any]]:
+        ids = sorted({value for value in event_ids if value})
+        if not ids:
+            return {}
+        rows = self.select(
+            "events",
+            filters={"id": f"in.({','.join(ids)})"},
+            limit=len(ids),
+        )
+        return {str(row["id"]): row for row in rows}
+
+    def list_project_renders(
+        self,
+        project_id: str,
+        *,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "renders",
+            filters={"project_id": f"eq.{project_id}"},
+            order="created_at.desc",
+            limit=limit,
+        )
+
+    def list_project_edits(
+        self,
+        project_id: str,
+        *,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "edits",
+            filters={"project_id": f"eq.{project_id}"},
+            order="created_at.asc",
+            limit=limit,
+        )
+
+    def list_project_feedback(
+        self,
+        project_id: str,
+        *,
+        limit: int = 500,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "feedback",
+            filters={"project_id": f"eq.{project_id}"},
+            order="created_at.asc",
+            limit=limit,
+        )
+
+    def get_preset_by_name(self, name: str) -> dict[str, Any] | None:
+        rows = self.select(
+            "presets",
+            filters={"name": f"eq.{name}"},
+            order="version.desc",
+            limit=1,
+        )
+        return rows[0] if rows else None
+
+    def create_learning_snapshot(
+        self,
+        project_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        return self.insert("learning_snapshots", {"project_id": project_id, **payload})
+
+    def list_learning_snapshots(
+        self,
+        project_id: str,
+        *,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "learning_snapshots",
+            filters={"project_id": f"eq.{project_id}"},
+            order="created_at.desc",
+            limit=limit,
+        )
