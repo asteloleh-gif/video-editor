@@ -352,3 +352,17 @@ The first stored preset is `OLEH_STYLE v1`: 30-second target, speech removed, st
 ### Railway
 
 `railway.json` is included for the API service. The API itself can deploy before the heavy media worker. FFmpeg/Remotion/Whisper rendering should be deployed as a separate worker or kept on a trusted local machine until the media-runtime image is finalized.
+
+## V0.6 secure worker queue
+
+All `/v1/*` API routes require `Authorization: Bearer $AUTOEDITOR_API_TOKEN`. The public `/health` route remains unauthenticated.
+
+Heavy media work stays off the Railway API container. Queue jobs in Supabase and let a local/remote worker claim them atomically:
+
+- `POST /v1/projects/{project_id}/jobs` — enqueue `analyze` or `create_short`
+- `GET /v1/projects/{project_id}/jobs` — inspect queue/history
+- `POST /v1/jobs/claim` — atomically claim the next queued job
+- `POST /v1/jobs/{job_id}/complete` — complete only as the claiming worker
+- `POST /v1/jobs/{job_id}/fail` — fail only as the claiming worker
+
+The claim operation uses PostgreSQL `FOR UPDATE SKIP LOCKED`, so two workers cannot claim the same queued job.
