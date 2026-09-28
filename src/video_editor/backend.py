@@ -341,5 +341,28 @@ class SupabaseRestClient:
             return None
         return dict(data)
 
-    def update_job(self, job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self.update("jobs", job_id, payload)
+    def update_job(
+        self,
+        job_id: str,
+        payload: dict[str, Any],
+        *,
+        worker_id: str | None = None,
+        expected_status: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {"id": f"eq.{job_id}"}
+        if worker_id:
+            params["worker_id"] = f"eq.{worker_id}"
+        if expected_status:
+            params["status"] = f"eq.{expected_status}"
+        data = self._request(
+            "PATCH",
+            "jobs",
+            params=params,
+            payload=payload,
+            prefer="return=representation",
+        )
+        if not data:
+            raise BackendRequestError(
+                f"Job {job_id} was not updated; worker/status may not match."
+            )
+        return dict(data[0])
