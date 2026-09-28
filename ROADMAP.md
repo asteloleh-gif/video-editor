@@ -54,3 +54,11 @@
 - atomic SKIP LOCKED worker claim RPC
 - worker-scoped complete/fail transitions
 - reference project/source metadata seeded from Google Drive for the first Battle Box learning set
+
+## V0.7 — local/remote media worker
+- platform-neutral worker that polls the secure Railway API
+- safe VIDEO_EDITOR_MEDIA_ROOT path boundary for every queued file operation
+- analyze jobs return full semantic edit plans
+- create_short jobs run the existing Vision -> FFmpeg -> Whisper/Remotion pipeline
+- worker completes/fails only the job it claimed
+- Windows/Mac execution can be enabled without moving RAW video into Railway
