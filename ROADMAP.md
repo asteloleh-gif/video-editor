@@ -47,3 +47,10 @@
 - batch queue with job state
 - cost/latency report per video
 - platform-specific render presets for Shorts / Reels / TikTok
+
+## V0.6 — secure worker queue
+- bearer protection for all /v1 mutation/read APIs; /health stays public
+- Supabase-backed analyze/create_short job queue
+- atomic SKIP LOCKED worker claim RPC
+- worker-scoped complete/fail transitions
+- reference project/source metadata seeded from Google Drive for the first Battle Box learning set
