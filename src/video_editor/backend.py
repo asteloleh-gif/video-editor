@@ -105,6 +105,25 @@ class SupabaseRestClient:
             return None
         return response.json()
 
+    def rpc(self, function_name: str, payload: dict[str, Any]) -> Any:
+        headers = dict(self._headers)
+        url = f"{self.settings.url}/rest/v1/rpc/{function_name}"
+        try:
+            with httpx.Client(timeout=self.settings.timeout_sec) as client:
+                response = client.post(url, json=payload, headers=headers)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            body = exc.response.text[:2000]
+            raise BackendRequestError(
+                f"Supabase RPC {function_name} failed: {exc.response.status_code} {body}"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise BackendRequestError(f"Supabase RPC request failed: {exc}") from exc
+
+        if not response.content:
+            return None
+        return response.json()
+
     def select(
         self,
         table: str,
@@ -295,3 +314,32 @@ class SupabaseRestClient:
             order="created_at.desc",
             limit=limit,
         )
+
+    def create_job(self, project_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.insert("jobs", {"project_id": project_id, **payload})
+
+    def list_project_jobs(
+        self,
+        project_id: str,
+        *,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        return self.select(
+            "jobs",
+            filters={"project_id": f"eq.{project_id}"},
+            order="created_at.desc",
+            limit=limit,
+        )
+
+    def claim_job(self, worker_id: str) -> dict[str, Any] | None:
+        data = self.rpc("claim_autoeditor_job", {"p_worker_id": worker_id})
+        if not data:
+            return None
+        if isinstance(data, list):
+            return dict(data[0]) if data else None
+        if isinstance(data, dict) and not data.get("id"):
+            return None
+        return dict(data)
+
+    def update_job(self, job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.update("jobs", job_id, payload)
