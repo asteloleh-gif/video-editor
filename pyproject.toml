@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astel-video-editor"
-version = "0.4.0"
-description = "Battle Box AI short-form editor with FastAPI + Supabase learning backend"
+version = "0.5.0"
+description = "Astel AutoEditor: AI short-form editing engine with review and feedback learning"
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=2.0",
