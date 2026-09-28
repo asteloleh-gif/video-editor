@@ -366,3 +366,15 @@ Heavy media work stays off the Railway API container. Queue jobs in Supabase and
 - `POST /v1/jobs/{job_id}/fail` — fail only as the claiming worker
 
 The claim operation uses PostgreSQL `FOR UPDATE SKIP LOCKED`, so two workers cannot claim the same queued job.
+
+## V0.7 local worker
+
+The heavy media pipeline runs on a machine that owns or syncs the RAW files instead of inside Railway. Configure the worker with `AUTOEDITOR_API_BASE_URL`, `AUTOEDITOR_API_TOKEN`, and `VIDEO_EDITOR_MEDIA_ROOT`, then run:
+
+```bash
+video-editor-worker --once
+# or keep polling
+video-editor-worker
+```
+
+Job payload paths are resolved under `VIDEO_EDITOR_MEDIA_ROOT`; path traversal and arbitrary filesystem access are rejected. This makes a Windows desktop, Mac, or later GPU box interchangeable as the render worker while Railway remains the lightweight control plane.
