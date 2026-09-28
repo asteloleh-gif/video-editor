@@ -33,11 +33,13 @@
 - automatic replay / slow-motion cue for selected score events
 - edit-quality comparison against RAW -> FINAL ground truth pairs
 
-## V0.5 — ingest / review loop
-- watched input folder
-- optional Google Drive ingest/output adapter
-- lightweight review UI: keep / delete / restore
-- feedback dataset from approved edits
+## V0.5 — review / learning loop
+- FastAPI review state for renders, detected events, edits and feedback
+- canonical feedback grammar: keep / cut / shorter / longer / goal / reaction / bad / more_like_this
+- deterministic OLEH_STYLE candidate adaptation from human review
+- learning snapshots stored in Supabase; candidates are never auto-promoted
+- cold-start / learning / grounded confidence bands at <20 / 20–49 / 50+ examples
+- groundwork for watched-folder and Google Drive ingest/output adapters
 
 ## V1 — agent workflow
 - stable tool surface: analyze_video / create_short / create_variations
