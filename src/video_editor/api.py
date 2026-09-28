@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -17,12 +17,13 @@ from .backend import (
     SupabaseRestClient,
 )
 from .final import create_short
+from .learning import build_learning_candidate
 
 
 app = FastAPI(
-    title="Battle Box AutoEditor API",
+    title="Astel AutoEditor API",
     version=__version__,
-    description="FastAPI control plane for AutoEditor projects, renders, presets and learning feedback.",
+    description="Universal AutoEditor control plane for projects, renders, presets and human-feedback learning.",
 )
 
 
@@ -80,13 +81,44 @@ class RenderCreate(BaseModel):
     error_text: str | None = None
 
 
+FeedbackType = Literal[
+    "keep",
+    "cut",
+    "shorter",
+    "longer",
+    "goal",
+    "reaction",
+    "bad",
+    "more_like_this",
+]
+
+
 class FeedbackCreate(BaseModel):
     render_id: UUID | None = None
     event_id: UUID | None = None
-    feedback_type: str = Field(min_length=1, max_length=80)
+    feedback_type: FeedbackType
     ai_decision: dict[str, Any] = Field(default_factory=dict)
     user_decision: dict[str, Any] = Field(default_factory=dict)
     note: str | None = None
+
+
+class EditCreate(BaseModel):
+    render_id: UUID | None = None
+    source_file_id: UUID | None = None
+    event_id: UUID | None = None
+    action: Literal["keep", "cut", "restore", "shorter", "longer", "reorder"]
+    sequence_position: int | None = Field(default=None, ge=0)
+    source_start_ms: int | None = Field(default=None, ge=0)
+    source_end_ms: int | None = Field(default=None, ge=0)
+    output_start_ms: int | None = Field(default=None, ge=0)
+    output_end_ms: int | None = Field(default=None, ge=0)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class LearnRequest(BaseModel):
+    preset_name: str = Field(default="OLEH_STYLE", min_length=1, max_length=120)
+    feedback_limit: int = Field(default=500, ge=1, le=2000)
+    save_candidate: bool = True
 
 
 class LocalRenderRequest(BaseModel):
@@ -172,7 +204,7 @@ def _event_rows_from_project(project_json_path: str) -> list[dict[str, Any]]:
 def health() -> dict[str, Any]:
     return {
         "status": "ok",
-        "service": "battlebox-autoeditor",
+        "service": "astel-autoeditor",
         "version": __version__,
         "supabase_configured": SupabaseRestClient.configured(),
         "local_render_enabled": _local_render_enabled(),
@@ -261,6 +293,133 @@ def add_feedback(
 ) -> dict[str, Any]:
     try:
         return db.add_feedback(str(project_id), body.model_dump(exclude_none=True, mode="json"))
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/projects/{project_id}/edits", status_code=201)
+def add_edit(
+    project_id: UUID,
+    body: EditCreate,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    payload = body.model_dump(exclude_none=True, mode="json")
+    if (
+        payload.get("source_start_ms") is not None
+        and payload.get("source_end_ms") is not None
+        and payload["source_end_ms"] < payload["source_start_ms"]
+    ):
+        raise HTTPException(status_code=422, detail="source_end_ms must be >= source_start_ms")
+    if (
+        payload.get("output_start_ms") is not None
+        and payload.get("output_end_ms") is not None
+        and payload["output_end_ms"] < payload["output_start_ms"]
+    ):
+        raise HTTPException(status_code=422, detail="output_end_ms must be >= output_start_ms")
+    try:
+        return db.add_edit(str(project_id), payload)
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.get("/v1/projects/{project_id}/review")
+def get_review_state(
+    project_id: UUID,
+    limit: int = 500,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    limit = max(1, min(limit, 1000))
+    try:
+        return {
+            "project_id": str(project_id),
+            "renders": db.list_project_renders(str(project_id), limit=min(limit, 50)),
+            "events": db.list_project_events(str(project_id), limit=limit),
+            "edits": db.list_project_edits(str(project_id), limit=limit),
+            "feedback": db.list_project_feedback(str(project_id), limit=limit),
+        }
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.get("/v1/projects/{project_id}/learning")
+def get_learning_state(
+    project_id: UUID,
+    limit: int = 20,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    limit = max(1, min(limit, 100))
+    try:
+        return {
+            "project_id": str(project_id),
+            "snapshots": db.list_learning_snapshots(str(project_id), limit=limit),
+        }
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/projects/{project_id}/learn", status_code=201)
+def learn_from_feedback(
+    project_id: UUID,
+    body: LearnRequest,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    try:
+        project = db.get_project(str(project_id))
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+
+        preset = db.get_preset_by_name(body.preset_name)
+        if preset is None:
+            raise HTTPException(status_code=404, detail="Preset not found.")
+
+        feedback = db.list_project_feedback(
+            str(project_id),
+            limit=body.feedback_limit,
+        )
+        event_ids = [
+            str(row["event_id"])
+            for row in feedback
+            if row.get("event_id")
+        ]
+        events_by_id = db.get_events_by_ids(event_ids)
+        result = build_learning_candidate(
+            dict(preset.get("config") or {}),
+            feedback,
+            events_by_id,
+        )
+
+        snapshot = None
+        if body.save_candidate:
+            summary = {
+                key: value
+                for key, value in result.items()
+                if key not in {"base_config", "candidate_config"}
+            }
+            summary["source_preset_name"] = preset.get("name")
+            summary["source_preset_version"] = preset.get("version")
+            snapshot = db.create_learning_snapshot(
+                str(project_id),
+                {
+                    "preset_id": str(preset["id"]),
+                    "feedback_count": result["sample_count"],
+                    "confidence": result["confidence"],
+                    "summary": summary,
+                    "candidate_config": result["candidate_config"],
+                    "status": "candidate",
+                },
+            )
+
+        return {
+            "project_id": str(project_id),
+            "preset": {
+                "id": preset.get("id"),
+                "name": preset.get("name"),
+                "version": preset.get("version"),
+            },
+            "learning": result,
+            "snapshot": snapshot,
+            "auto_promoted": False,
+        }
     except BackendRequestError as exc:
         raise _translate_backend_error(exc) from exc
 
