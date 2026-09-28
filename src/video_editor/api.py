@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -25,6 +28,26 @@ app = FastAPI(
     version=__version__,
     description="Universal AutoEditor control plane for projects, renders, presets and human-feedback learning.",
 )
+
+
+@app.middleware("http")
+async def require_api_token(request: Request, call_next):
+    if request.url.path.startswith("/v1/"):
+        token = os.getenv("AUTOEDITOR_API_TOKEN", "").strip()
+        if not token:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "AUTOEDITOR_API_TOKEN is not configured."},
+            )
+        supplied = request.headers.get("authorization", "")
+        expected = f"Bearer {token}"
+        if not secrets.compare_digest(supplied, expected):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing bearer token."},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    return await call_next(request)
 
 
 class ProjectCreate(BaseModel):
@@ -121,6 +144,24 @@ class LearnRequest(BaseModel):
     save_candidate: bool = True
 
 
+class JobCreate(BaseModel):
+    source_file_id: UUID | None = None
+    render_id: UUID | None = None
+    job_type: Literal["analyze", "create_short"]
+    priority: int = Field(default=100, ge=-1000, le=1000)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkerClaim(BaseModel):
+    worker_id: str = Field(min_length=1, max_length=160)
+
+
+class WorkerFinish(BaseModel):
+    worker_id: str = Field(min_length=1, max_length=160)
+    result: dict[str, Any] = Field(default_factory=dict)
+    error_text: str | None = Field(default=None, max_length=4000)
+
+
 class LocalRenderRequest(BaseModel):
     source_file_id: UUID | None = None
     source_path: str
@@ -208,6 +249,7 @@ def health() -> dict[str, Any]:
         "version": __version__,
         "supabase_configured": SupabaseRestClient.configured(),
         "local_render_enabled": _local_render_enabled(),
+        "api_auth_configured": bool(os.getenv("AUTOEDITOR_API_TOKEN", "").strip()),
     }
 
 
@@ -420,6 +462,92 @@ def learn_from_feedback(
             "snapshot": snapshot,
             "auto_promoted": False,
         }
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/projects/{project_id}/jobs", status_code=201)
+def create_job(
+    project_id: UUID,
+    body: JobCreate,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    try:
+        if db.get_project(str(project_id)) is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        return db.create_job(
+            str(project_id),
+            body.model_dump(exclude_none=True, mode="json"),
+        )
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.get("/v1/projects/{project_id}/jobs")
+def list_jobs(
+    project_id: UUID,
+    limit: int = 100,
+    db: SupabaseRestClient = Depends(_db),
+) -> list[dict[str, Any]]:
+    limit = max(1, min(limit, 500))
+    try:
+        return db.list_project_jobs(str(project_id), limit=limit)
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/jobs/claim")
+def claim_job(
+    body: WorkerClaim,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    try:
+        job = db.claim_job(body.worker_id)
+        return {"job": job}
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/jobs/{job_id}/complete")
+def complete_job(
+    job_id: UUID,
+    body: WorkerFinish,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    try:
+        return db.update_job(
+            str(job_id),
+            {
+                "status": "completed",
+                "result": body.result,
+                "error_text": None,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+            },
+            worker_id=body.worker_id,
+            expected_status="running",
+        )
+    except BackendRequestError as exc:
+        raise _translate_backend_error(exc) from exc
+
+
+@app.post("/v1/jobs/{job_id}/fail")
+def fail_job(
+    job_id: UUID,
+    body: WorkerFinish,
+    db: SupabaseRestClient = Depends(_db),
+) -> dict[str, Any]:
+    try:
+        return db.update_job(
+            str(job_id),
+            {
+                "status": "failed",
+                "result": body.result,
+                "error_text": (body.error_text or "Worker reported failure")[:4000],
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+            },
+            worker_id=body.worker_id,
+            expected_status="running",
+        )
     except BackendRequestError as exc:
         raise _translate_backend_error(exc) from exc
 
