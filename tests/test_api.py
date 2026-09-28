@@ -15,6 +15,7 @@ def test_health_without_supabase(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SUPABASE_SECRET_KEY", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     monkeypatch.delenv("VIDEO_EDITOR_ALLOW_LOCAL_RENDER", raising=False)
+    monkeypatch.delenv("AUTOEDITOR_API_TOKEN", raising=False)
 
     client = TestClient(app)
     response = client.get("/health")
@@ -24,15 +25,34 @@ def test_health_without_supabase(monkeypatch: pytest.MonkeyPatch) -> None:
     assert payload["status"] == "ok"
     assert payload["supabase_configured"] is False
     assert payload["local_render_enabled"] is False
+    assert payload["api_auth_configured"] is False
+
+
+def test_v1_routes_require_bearer_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTOEDITOR_API_TOKEN", "test-token")
+    client = TestClient(app)
+
+    missing = client.get("/v1/presets")
+    invalid = client.get(
+        "/v1/presets",
+        headers={"Authorization": "Bearer wrong-token"},
+    )
+
+    assert missing.status_code == 401
+    assert invalid.status_code == 401
 
 
 def test_db_route_returns_503_without_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTOEDITOR_API_TOKEN", "test-token")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SECRET_KEY", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
     client = TestClient(app)
-    response = client.get("/v1/presets")
+    response = client.get(
+        "/v1/presets",
+        headers={"Authorization": "Bearer test-token"},
+    )
 
     assert response.status_code == 503
     assert "SUPABASE_URL" in response.json()["detail"]
