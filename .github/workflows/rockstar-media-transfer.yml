@@ -1,0 +1,66 @@
+name: Rockstar GTA VI media transfer
+
+on:
+  push:
+    branches:
+      - 'temp/rockstar-media-transfer-20261001'
+
+jobs:
+  fetch-media:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and unpack official Rockstar media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p media/artwork media/screenshots media/clips media/ultimate media/vintage
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/artwork.zip "https://media-rockstargames-com.akamaized.net/VI/downloads/artwork_wallpapers/GTAVI_Artwork_Wallpapers.zip"
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/screenshots.zip "https://media-rockstargames-com.akamaized.net/VI/downloads/screenshots/GTAVI_Screenshots.zip"
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/clips.zip "https://media-rockstargames-com.akamaized.net/VI/downloads/videos/GTAVI_Videos.zip"
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/ultimate.zip "https://media-rockstargames-com.akamaized.net/VI/downloads/screenshots/GTAVI_Ultimate_Edition_Benefits.zip"
+          curl -fL --retry 3 --retry-delay 2 -o /tmp/vintage.zip "https://media-rockstargames-com.akamaized.net/VI/downloads/screenshots/GTAVI_Vintage_Vice_City_Pack.zip"
+          unzip -q /tmp/artwork.zip -d media/artwork
+          unzip -q /tmp/screenshots.zip -d media/screenshots
+          unzip -q /tmp/clips.zip -d media/clips
+          unzip -q /tmp/ultimate.zip -d media/ultimate
+          unzip -q /tmp/vintage.zip -d media/vintage
+
+      - name: Upload artwork artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTAVI_Artwork_Wallpapers_OFFICIAL
+          path: media/artwork/
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload screenshots artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTAVI_Screenshots_OFFICIAL
+          path: media/screenshots/
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload clips artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTAVI_Character_Clips_OFFICIAL
+          path: media/clips/
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload Ultimate Edition artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTAVI_Ultimate_Edition_OFFICIAL
+          path: media/ultimate/
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload Vintage Vice City artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GTAVI_Vintage_Vice_City_OFFICIAL
+          path: media/vintage/
+          compression-level: 0
+          retention-days: 1
