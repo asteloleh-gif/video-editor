@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "source_id": "synthetic",
+  "source_filename": "synthetic.mp4",
+  "scenes": [
+    {"id": "s01", "start": "00:01.300", "end": "00:02.300", "description": "Synthetic test segment 1, NOT a GTA scene"},
+    {"id": "s02", "start": 3.0, "end": 4.5, "description": "Synthetic test segment 2, NOT a GTA scene"},
+    {"id": "s03", "start": 5.0, "end": 6.2, "description": "Synthetic test segment 3, NOT a GTA scene"}
+  ]
+}
