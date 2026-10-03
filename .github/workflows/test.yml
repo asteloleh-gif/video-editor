@@ -30,3 +30,18 @@ jobs:
       - name: Typecheck Remotion
         working-directory: remotion
         run: npm run typecheck
+
+
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install AstelFam Editor
+        working-directory: editor
+        run: npm install
+      - name: Build AstelFam Editor
+        working-directory: editor
+        run: npm run build
