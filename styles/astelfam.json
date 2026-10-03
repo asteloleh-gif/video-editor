@@ -1,0 +1,32 @@
+{
+  "name": "astelfam",
+  "accent": "#FFD84D",
+  "secondary": "#80F3D2",
+  "danger": "#FF6B7A",
+  "text": "#FFFFFF",
+  "panel": "rgba(12, 12, 16, 0.76)",
+  "shadow": "rgba(0, 0, 0, 0.62)",
+  "brand": "ASTEL FAM",
+  "show_brand": true,
+  "show_attempt_counter": false,
+  "show_score_counter": false,
+  "reaction_zoom": 1.07,
+  "caption": {
+    "enabled": true,
+    "max_chars": 34,
+    "font_size": 60,
+    "bottom": 150
+  },
+  "event_badge": {
+    "enabled": true,
+    "font_size": 72,
+    "top": 170
+  },
+  "astelfam": {
+    "show_title": true,
+    "title": "ASTEL FAM",
+    "emoji_reactions": true,
+    "caption_max_width": 900,
+    "caption_bottom": 150
+  }
+}
