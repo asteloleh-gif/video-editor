@@ -192,6 +192,8 @@ def cmd_restyle(args: argparse.Namespace) -> int:
         require_remotion=True,
         whisper_model=args.whisper_model,
         whisper_language=args.whisper_language,
+        use_vision_events=not args.no_vision_events,
+        **_analysis_options(args),
     )
     print(json.dumps({"status": "complete", **result.to_dict()}, indent=2))
     if args.open:
@@ -325,8 +327,14 @@ def main() -> None:
     restyle_parser.add_argument("--require-whisper", action="store_true")
     restyle_parser.add_argument("--whisper-model")
     restyle_parser.add_argument("--whisper-language", default="auto")
+    restyle_parser.add_argument(
+        "--no-vision-events",
+        action="store_true",
+        help="Disable semantic event analysis; captions only",
+    )
     restyle_parser.add_argument("--open", action="store_true")
     restyle_parser.add_argument("--reveal", action="store_true")
+    _add_analysis_args(restyle_parser)
     restyle_parser.set_defaults(func=cmd_restyle)
 
     transcript_parser = sub.add_parser("transcribe", help="Local Whisper transcription")
