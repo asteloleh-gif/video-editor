@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .pipeline import EditPlan, process
+from .probe import probe
 from .remotion_bridge import remotion_ready, render_with_remotion
 from .style import load_style
 from .timeline import build_timeline, map_detections, map_transcript_segments
@@ -27,6 +28,20 @@ class ShortResult:
     event_cues: int
     duration_original_sec: float
     duration_final_sec: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class RestyleResult:
+    input: str
+    final: str
+    project: str
+    graphics: str
+    transcript_engine: str | None
+    transcript_segments: int
+    duration_sec: float
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -71,6 +86,97 @@ def _build_payload(
         },
         "transcript": transcript.to_dict() if transcript else None,
     }
+
+
+def restyle_video(
+    source: str | Path,
+    output: str | Path,
+    *,
+    style_path: str | Path | None = None,
+    use_whisper: bool = True,
+    require_whisper: bool = False,
+    use_remotion: bool = True,
+    require_remotion: bool = True,
+    whisper_model: str | Path | None = None,
+    whisper_language: str = "auto",
+) -> RestyleResult:
+    """Keep the existing edit/audio intact and apply only the visual layer."""
+    source_path = Path(source).expanduser().resolve()
+    if not source_path.is_file():
+        raise FileNotFoundError(source_path)
+    final_path = Path(output).expanduser().resolve()
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    project_path = final_path.with_suffix(".project.json")
+
+    info = probe(source_path)
+    style = load_style(style_path)
+
+    transcript: TranscriptResult | None = None
+    if use_whisper and info.has_audio:
+        if whisper_ready(whisper_model):
+            transcript = transcribe_video(
+                source_path,
+                model_path=whisper_model,
+                language=whisper_language,
+                max_len=int(style.get("caption", {}).get("max_chars", 34)),
+            )
+        elif require_whisper:
+            raise RuntimeError("Whisper is required but whisper-cli/model is not ready. Run setup_mac.sh.")
+        else:
+            print("[video-editor] Whisper unavailable; continuing without captions.", file=sys.stderr)
+
+    captions = [segment.to_dict() for segment in transcript.segments] if transcript else []
+    payload = {
+        "version": 1,
+        "style": style,
+        "events": [],
+        "captions": captions,
+        "timeline": [],
+        "source": {
+            "duration": info.duration,
+            "width": info.width,
+            "height": info.height,
+            "fps": info.fps,
+            "has_audio": info.has_audio,
+        },
+        "analysis": {
+            "mode": "restyle-existing",
+            "cuts_changed": False,
+            "audio_changed": False,
+        },
+        "transcript": transcript.to_dict() if transcript else None,
+    }
+    project_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    if use_remotion:
+        if remotion_ready():
+            render_with_remotion(
+                source_path,
+                final_path,
+                payload=payload,
+                width=1080,
+                height=1920,
+                fps=info.fps or 30.0,
+            )
+            graphics_mode = "remotion"
+        elif require_remotion:
+            raise RuntimeError("Remotion is required but is not installed. Run setup_mac.sh.")
+        else:
+            shutil.copy2(source_path, final_path)
+            graphics_mode = "copy-only"
+    else:
+        shutil.copy2(source_path, final_path)
+        graphics_mode = "copy-only"
+
+    return RestyleResult(
+        input=str(source_path),
+        final=str(final_path),
+        project=str(project_path),
+        graphics=graphics_mode,
+        transcript_engine=transcript.engine if transcript else None,
+        transcript_segments=len(captions),
+        duration_sec=info.duration,
+    )
 
 
 def create_short(
