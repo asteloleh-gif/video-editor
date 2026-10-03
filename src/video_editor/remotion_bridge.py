@@ -31,6 +31,12 @@ def remotion_ready() -> bool:
     return bool(shutil.which("node")) and remotion_binary() is not None
 
 
+def composition_for_payload(payload: dict[str, Any]) -> str:
+    style = payload.get("style") if isinstance(payload, dict) else None
+    name = str((style or {}).get("name") or "").strip().lower() if isinstance(style, dict) else ""
+    return "AstelFamShort" if name.startswith("astelfam") else "BattleBoxShort"
+
+
 def _link_media(source: Path, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists() or target.is_symlink():
@@ -89,11 +95,12 @@ def render_with_remotion(
     )
     props_path.write_text(json.dumps(props, indent=2), encoding="utf-8")
 
+    composition = composition_for_payload(props)
     cmd = [
         str(binary),
         "render",
         "src/index.ts",
-        "BattleBoxShort",
+        composition,
         str(target),
         "--props",
         str(props_path),
