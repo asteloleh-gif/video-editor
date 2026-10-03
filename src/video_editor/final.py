@@ -7,7 +7,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .pipeline import EditPlan, process
+from .intervals import Interval
+from .pipeline import EditPlan, analyze, process
 from .probe import probe
 from .remotion_bridge import remotion_ready, render_with_remotion
 from .style import load_style
@@ -41,6 +42,7 @@ class RestyleResult:
     graphics: str
     transcript_engine: str | None
     transcript_segments: int
+    event_cues: int
     duration_sec: float
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,6 +101,8 @@ def restyle_video(
     require_remotion: bool = True,
     whisper_model: str | Path | None = None,
     whisper_language: str = "auto",
+    use_vision_events: bool = True,
+    **analysis_options: Any,
 ) -> RestyleResult:
     """Keep the existing edit/audio intact and apply only the visual layer."""
     source_path = Path(source).expanduser().resolve()
@@ -126,12 +130,21 @@ def restyle_video(
             print("[video-editor] Whisper unavailable; continuing without captions.", file=sys.stderr)
 
     captions = [segment.to_dict() for segment in transcript.segments] if transcript else []
+
+    events: list[dict[str, Any]] = []
+    vision_summaries: list[str] = []
+    if use_vision_events:
+        event_plan = analyze(source_path, **analysis_options)
+        identity_timeline = build_timeline([Interval(0.0, info.duration)])
+        events = map_detections(event_plan.vision_detections, identity_timeline)
+        vision_summaries = list(event_plan.vision_summaries)
+
     payload = {
         "version": 1,
         "style": style,
-        "events": [],
+        "events": events,
         "captions": captions,
-        "timeline": [],
+        "timeline": [{"source_start": 0.0, "source_end": info.duration, "output_start": 0.0, "output_end": info.duration}],
         "source": {
             "duration": info.duration,
             "width": info.width,
@@ -143,6 +156,8 @@ def restyle_video(
             "mode": "restyle-existing",
             "cuts_changed": False,
             "audio_changed": False,
+            "event_analysis": "vision" if use_vision_events else "disabled",
+            "vision_summaries": vision_summaries,
         },
         "transcript": transcript.to_dict() if transcript else None,
     }
@@ -175,6 +190,7 @@ def restyle_video(
         graphics=graphics_mode,
         transcript_engine=transcript.engine if transcript else None,
         transcript_segments=len(captions),
+        event_cues=len(events),
         duration_sec=info.duration,
     )
 
