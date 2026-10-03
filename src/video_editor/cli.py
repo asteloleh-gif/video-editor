@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from .fcpxml import write_fcpxml
-from .final import create_short
+from .final import create_short, restyle_video
 from .pipeline import analyze, process, save_plan
 from .probe import executable
 from .remotion_bridge import remotion_ready
@@ -178,6 +178,29 @@ def cmd_create_short(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_restyle(args: argparse.Namespace) -> int:
+    source = Path(args.video).expanduser()
+    output = Path(args.output).expanduser() if args.output else Path("output") / f"{source.stem}_astelfam.mp4"
+    default_style = Path(__file__).resolve().parents[2] / "styles" / "astelfam.json"
+    result = restyle_video(
+        source,
+        output,
+        style_path=args.style or default_style,
+        use_whisper=not args.no_whisper,
+        require_whisper=args.require_whisper,
+        use_remotion=True,
+        require_remotion=True,
+        whisper_model=args.whisper_model,
+        whisper_language=args.whisper_language,
+    )
+    print(json.dumps({"status": "complete", **result.to_dict()}, indent=2))
+    if args.open:
+        _open(Path(result.final))
+    elif args.reveal:
+        _reveal(Path(result.final))
+    return 0
+
+
 def cmd_transcribe(args: argparse.Namespace) -> int:
     result = transcribe_video(
         args.video,
@@ -290,6 +313,21 @@ def main() -> None:
     short_parser.add_argument("--reveal", action="store_true", help="Reveal the final MP4 in Finder")
     _add_analysis_args(short_parser)
     short_parser.set_defaults(func=cmd_create_short)
+
+    restyle_parser = sub.add_parser(
+        "restyle",
+        help="Keep existing cuts/audio and apply AstelFam Remotion graphics only",
+    )
+    restyle_parser.add_argument("video")
+    restyle_parser.add_argument("-o", "--output")
+    restyle_parser.add_argument("--style", help="Style JSON; defaults to styles/astelfam.json")
+    restyle_parser.add_argument("--no-whisper", action="store_true")
+    restyle_parser.add_argument("--require-whisper", action="store_true")
+    restyle_parser.add_argument("--whisper-model")
+    restyle_parser.add_argument("--whisper-language", default="auto")
+    restyle_parser.add_argument("--open", action="store_true")
+    restyle_parser.add_argument("--reveal", action="store_true")
+    restyle_parser.set_defaults(func=cmd_restyle)
 
     transcript_parser = sub.add_parser("transcribe", help="Local Whisper transcription")
     transcript_parser.add_argument("video")
