@@ -5,24 +5,45 @@
 CapCut dialogue/speech removal is the quality benchmark.
 Do not remove CapCut from the workflow until Astel passes side-by-side listening tests.
 
-## P0 — Remove Dialogue
+## P0 — Separate Voice (CapCut benchmark)
 
 Required editor action:
 
-`REMOVE DIALOGUE`
+`SEPARATE VOICE`
+
+This follows the useful CapCut interaction model shown by Oleg:
+
+Original mixed audio
+→ AI separation
+→ VOICE stem
+→ BACKGROUND stem
+
+After separation the user can choose:
+- Keep Voice
+- Remove Voice
+- Keep Both
+- Solo Voice
+- Solo Background
+- Restore Original
+- A/B Original vs Separated
 
 Goal:
-- remove spoken Russian/Ukrainian dialogue;
-- preserve useful ambience, impacts, room sound, game/action sound and other non-dialogue audio as well as practical;
-- never silently mute the whole clip unless the user explicitly chooses Mute.
+- isolate spoken/sung human voice from the mixed source;
+- preserve useful ambience, impacts, room sound, game/action sound, laughter/noise where the separation model classifies it as background;
+- for the current AstelFam workflow, Remove Voice is the primary action so Russian dialogue can be removed while the background bed remains;
+- later the Voice stem may be replaced by an English dub while Background remains intact.
 
-UI states:
-- Original
-- Dialogue Removed
-- Compare A/B
-- Restore Original
+The operation must be non-destructive. Never overwrite or discard the original mixed audio.
 
-The operation must be non-destructive.
+UI should show separation progress and explicit state:
+- Not separated
+- Separating 0–100%
+- Ready
+- Error / retry
+- Voice enabled/disabled
+- Background enabled/disabled
+
+The timeline should expose the stems as independently editable audio tracks when expanded.
 
 ## P1 — Dubbing
 
