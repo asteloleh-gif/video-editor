@@ -1,0 +1,10 @@
+{
+  "name": "openreel-ios-reference",
+  "status": "parked",
+  "sourceAvailablePublicly": false,
+  "publicUpstream": "Augani/openreel-video",
+  "pinnedPublicCommit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "mobileRemovalCommit": "3efdb84dc9655ac82778600212c4d0b008a69f82",
+  "criticalPath": false,
+  "nextAction": "Re-evaluate only if upstream republishes mobile source or authorized access is obtained."
+}
