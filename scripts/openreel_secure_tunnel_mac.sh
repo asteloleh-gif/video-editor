@@ -4,6 +4,11 @@ set -euo pipefail
 set +x
 umask 077
 
+# Prefer OpenReel's official shim, which follows changing ports and tokens.
+if [[ "${OPENREEL_TUNNEL_TRANSPORT:-stdio}" == "stdio" ]]; then
+  exec python3 "$(dirname "$0")/openreel_tunnel_connect_mac.py"
+fi
+
 PROFILE="${OPENREEL_TUNNEL_PROFILE:-astel-openreel}"
 MCP_URL="${OPENREEL_MCP_URL:-http://127.0.0.1:58187/mcp}"
 
