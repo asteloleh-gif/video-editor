@@ -28,8 +28,11 @@ because no project is open in OpenReel. No project edits were executed.
   projects. `get_editor_state` reached OpenReel but returned `No project is open`.
 - Local `list_tracks` and `list_clips` also returned `No project is open`.
 - No write/edit, split, export, publishing or project-opening tool was invoked.
-- This verification used the Responses API. ChatGPT plugin installation is a
-  separate UI step; discovery success does not itself install a ChatGPT plugin.
+- ChatGPT plugin **Astel OpenReel** was created and connected after explicit
+  approval. Its detail page shows **Connected** and **Try in chat**.
+  Plugin URL: https://chatgpt.com/plugins/plugin_asdk_app_6ac56bfb439481918b56f0ebca892670
+- Tool count and project READ were verified through the Responses API; a READ
+  within a ChatGPT chat is the next end-to-end product check.
 
 ## Network and credential boundary
 
