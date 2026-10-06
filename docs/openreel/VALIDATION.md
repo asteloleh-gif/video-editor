@@ -21,6 +21,7 @@ Pinned OpenReel: `c9340465e5d37e684cc25bdbe746c4ccd45e165c`. Astel base: `6d0877
 | Mac Desktop runtime + MCP | PASS, connection scope | Source-built Electron started. Authenticated initialize/tools/list returns **311**. Created a separate blank 1080×1920 / 30fps synthetic validation project via live MCP, then read it with the Astel probe. No existing project was open before creation. Token excluded from saved evidence. |
 | Synthetic FFmpeg baseline | PASS | Generated test video/audio only; Astel FFmpeg rough cut is **5.000000 seconds**, measured by ffprobe. This is the Astel baseline, not a native OpenReel export. |
 | MIT notices | PASS | Original OpenReel LICENSE preserved plus unchanged copy in integration layer. |
+| GitHub CI, implementation commit `173de23` | PASS | Both `editor` and `test` jobs succeeded: [run 37505681358](https://github.com/asteloleh-gif/video-editor/actions/runs/37505681358). |
 | Git diff / setup shell syntax | PASS | No whitespace errors; setup/verification scripts parse. Production configs untouched. |
 
 Raw console logs are local in the parent `integration-workspace/` directory. Structured durable summary: `VALIDATION-SUMMARY.json`. Synthetic project/recipe, desktop snapshot and media artifacts are local under ignored `output/`. Registry docs are intentionally committed; endpoint tokens and RAW media are not.

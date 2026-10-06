@@ -24,5 +24,10 @@
   "native_media_export": "unverified",
   "real_media_ab": "pending",
   "production_changed": false,
-  "youtube_published": false
+  "youtube_published": false,
+  "github_ci": {
+    "implementation_commit": "173de23",
+    "conclusion": "success",
+    "url": "https://github.com/asteloleh-gif/video-editor/actions/runs/37505681358"
+  }
 }
