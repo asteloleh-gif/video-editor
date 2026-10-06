@@ -1,0 +1,30 @@
+c9340465e5d37e684cc25bdbe746c4ccd45e165c 2026-10-03T00:08:40+00:00 feat(editor): improve preview performance, editing workflows, and browser export
+2dac9a6bbfcf5c4d9883a839f981732ea6519d92 2026-10-01T19:22:06+00:00 docs: redesign README around video editing workflows
+24738d1d3882f59cfba459d9483ebdf11ef5183c 2026-10-01T19:19:23+00:00 docs: make sponsor badge larger and prominent
+61f06c69e08dcb94e7c5f5e79e5c679dd9181002 2026-10-01T19:18:10+00:00 docs: add clear Sponsor me badge to README
+3efdb84dc9655ac82778600212c4d0b008a69f82 2026-10-01T19:17:10+00:00 Merge private main updates excluding Android and iOS apps
+5f3c85e5fc223c86060bf4b12e1b4dec58e9b8a9 2026-08-29T12:13:58+00:00 chore(deps): align public workspace lockfile
+e15672451f58ed4bfae53b2c8f78f7c23e6493f1 2026-08-29T12:07:19+00:00 ci(desktop): remove obsolete Rust readiness workflow
+f818d429d61bd8a6657ae1bd494eda99269649ad 2026-08-29T11:55:15+00:00 chore(desktop): release 1.0.0-alpha.17
+a7a0ebf32bce2402fccec38b581d82200a2164d2 2026-08-29T11:54:59+00:00 ci(release): publish desktop builds on GitHub
+128d99b7d1b842e4ff164b1e01bcf15d9ec00c41 2026-08-29T11:53:28+00:00 feat(web): sync latest web and desktop updates
+2566c34e0f8ea22992a85f3ff16e048307b49365 2026-08-18T12:26:27+00:00 Improve caption workflows and discovery (#96)
+f0c92c3f46ca5b85e649001bf8557b7be0b24341 2026-08-18T02:30:28+00:00 chore: remove community update draft
+32e4b3274f913460c909c6f0912bb04004ba815b 2026-08-18T02:30:27+00:00 chore: remove announcement draft
+fc2b0f566a5f910c2674dc624edf719a46774486 2026-08-18T02:30:04+00:00 chore: remove tweet draft
+7ef1b6c1225f945aa5ddaebf42c92ce2820cd2ca 2026-07-24T18:25:22+00:00 feat: sync public web and desktop updates (#88)
+de548085cbbb3fbd9d526ab73089a59f778c8132 2026-06-01T18:08:08+00:00 feat: enhance toolbar dropdown item styling for better accessibility and visibility
+f88ad33d4c969af46aca96a7a2b2874d86529f94 2026-06-01T14:35:37+00:00 feat: optimize video loading and playback handling in preview component
+b67a5e5a7ce263c5e55fb56c3345e2e71ac7c855 2026-06-01T14:15:43+00:00 feat: enhance video synchronization with drawable frame handling and timeout management
+976a1fe118193fbbba5fe9541ae2755633ab5333 2026-06-01T13:41:28+00:00 feat: add video thumbnail generation and improve transition rendering
+43bb959c4728dabff5f0a0a0fdeda7fc9e477839 2026-06-01T11:48:19+00:00 feat: implement aspect ratio preservation in rendering engines
+a60d27630f233c2a365c1bb638eb1e7c39bec57e 2026-06-01T11:28:31+00:00 feat: implement aspect ratio handling for clip rendering and transform fit modes
+676d8a1a629b05cc09feb9286807bdd6e68a1dd3 2026-05-31T10:55:52+00:00 fix(ui): remove 'Pro' branding text (#73)
+3272ec580cc75420f1804d172a308f87f5d4abf2 2026-05-31T10:55:49+00:00 feat: drag-drop effects/transitions, speed-curve drag, 3D text/objects, track mattes (#72)
+3ee0205edc853f3c504f2edf8e51ae46aaeaa1f9 2026-05-30T20:34:53+00:00 feat(inspector): redesign editor into real tabbed panels (#71)
+448e6a60cc8ed6f6138348d71fcb90b55ff3e6d3 2026-05-21T08:25:21+00:00 fix(timeline): scrub responsiveness, undo grouping, multi-clip drag, gaps, duplicate (#64)
+33bc120cca728b95794cb4fbcb0f31971bff531f 2026-05-21T08:01:45+00:00 fix(editor): preserve original asset dimensions and add white balance controls (#63)
+5536757220c4e21483cf9591e664f19cc5d76277 2026-05-20T22:05:30+00:00 fix: clip-to-clip transitions in preview + export, keyframe effects, dropdown stacking (#62)
+acc3734faaff93cb61dfd3fce7b0e48547bcb007 2026-05-20T21:22:40+00:00 Add inspector SRT import + custom font upload for caption workflows (#59)
+3772272a71f4522af31dc481c70270f068ebe2cc 2026-05-17T21:25:16+00:00 Revert "feat(ios): add OpenReel Video iOS app — Phase 1 complete"
+e4885c63d76c173e8e23b60c4f1811c54e91c16d 2026-05-17T21:24:54+00:00 feat(ios): add OpenReel Video iOS app — Phase 1 complete

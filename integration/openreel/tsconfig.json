@@ -1,0 +1,22 @@
+{
+  "extends": "../../vendor/openreel/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable",
+      "ESNext.Disposable"
+    ],
+    "typeRoots": [
+      "../../vendor/openreel/apps/desktop/node_modules/@types"
+    ],
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "execute-recipe.ts",
+    "cli.ts"
+  ]
+}

@@ -1,5 +1,9 @@
 # Battle Box AutoEditor
 
+## OpenReel integration candidate — Mac first
+
+The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.
+
 AI-assisted short-form editing for Battle Box challenge footage.
 
 This is an **agentic editing stack**, not a single magic editor. The semantic layer decides what is happening in the game; deterministic media tools execute the edit.

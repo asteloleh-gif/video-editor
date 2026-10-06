@@ -1,0 +1,28 @@
+{
+  "audit_date": "2026-10-06",
+  "openreel_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "astel_base": "6d0877a1a86ac04991d0521eb1990d9d8777e017",
+  "upstream_tests": {
+    "passed": 3258,
+    "skipped": 34
+  },
+  "astel_tests_passed": 30,
+  "integration_tests_passed": 2,
+  "registry_tool_count": 311,
+  "desktop_mcp_tool_count": 311,
+  "desktop_project": {
+    "id": "bfdfdf0f-751b-480c-bdf5-14b7a4d1d723",
+    "name": "Astel OpenReel Stage 1 \u2014 synthetic validation",
+    "settings": {
+      "width": 1080,
+      "height": 1920,
+      "fps": 30
+    }
+  },
+  "synthetic_ffmpeg_duration_seconds": 5.0,
+  "offline_recipe_cli": "passed",
+  "native_media_export": "unverified",
+  "real_media_ab": "pending",
+  "production_changed": false,
+  "youtube_published": false
+}

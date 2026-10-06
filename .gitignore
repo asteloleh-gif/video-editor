@@ -13,3 +13,11 @@ output/
 remotion/node_modules/
 remotion/public/jobs/
 remotion/out/
+
+# Integration builds and local audit artifacts
+editor/node_modules/
+editor/dist/
+*.tsbuildinfo
+*.egg-info/
+.vite/
+integration/openreel/build/
