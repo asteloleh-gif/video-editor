@@ -166,7 +166,7 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "F at 1.20 tempo accepted as provisional English working baseline; validate longer speech and other texts before production integration"
+      "next_step": "F at 1.20 tempo accepted as provisional English working baseline; 45-second longer pilot completed and awaits owner listening for identity, pacing and intonation"
     },
     "english_reference_comparison": {
       "source_recording_received": true,
@@ -223,10 +223,39 @@
       "human_assessment": "owner_recognizes_own_voice_and_pacing_matches_usual_speech",
       "acceptance_scope": "provisional_working_baseline_for_this_short_English_sample",
       "longer_speech_validated": false,
+      "longer_speech_technical_smoke_completed": true,
       "original_B_preserved": true,
       "reference_files_modified": false,
       "media_committed": false,
       "production_approved": false
+    },
+    "english_long_form_pilot": {
+      "artifact": "pilot-004-en-long",
+      "script_type": "fictional_listening_test",
+      "script_words": 169,
+      "reference_profile": "Oleh EN",
+      "engine": "qwen",
+      "model_size": "0.6B",
+      "seed": 42,
+      "nominal_upstream_chunks": 2,
+      "original_duration_seconds": 54.43,
+      "listening_duration_seconds": 45.34079166666667,
+      "postprocessing_tempo": 1.2,
+      "filters": "highpass=f=60:p=2,atempo=1.20",
+      "loudness_lufs": -21.86,
+      "true_peak_dbfs": -2.0,
+      "full_scale_samples": 0,
+      "nonfinite_samples": 0,
+      "asr_word_error_rate_proxy": 0.0,
+      "submission_to_download_observed_seconds": 377.022556,
+      "timing_scope": "includes queue, inference, polling and transfer; not pure inference",
+      "reference_binding_verified": true,
+      "accepted_short_baseline_sha256_preserved": true,
+      "intonation_cues": "semantic wording and punctuation only; instruct unset",
+      "human_voice_identity_pacing_and_intonation_assessment": "pending_owner_listening",
+      "media_committed": false,
+      "production_approved": false,
+      "published": false
     },
     "english_tempo_comparison_002": {
       "source": "Original English-reference pilot B; no cumulative time stretching",
