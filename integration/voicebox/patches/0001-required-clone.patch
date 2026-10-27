@@ -1,0 +1,142 @@
+--- a/backend/backends/mlx_backend.py
++++ b/backend/backends/mlx_backend.py
+@@ -5,6 +5,8 @@
+ from typing import Optional, List, Tuple
+ import asyncio
+ import logging
++import os
++import inspect
+ import numpy as np
+ from pathlib import Path
+ from concurrent.futures import ThreadPoolExecutor
+@@ -68,6 +70,14 @@
+         Returns:
+             HuggingFace Hub model ID for MLX
+         """
++        # Astel: load only the explicitly downloaded, pinned local model.
++        local_root = os.environ.get("ASTEL_VOICEBOX_MODEL_ROOT")
++        if local_root:
++            local_model = Path(local_root) / model_size
++            if not (local_model / "config.json").is_file():
++                raise FileNotFoundError("Download the pinned Astel Voicebox model first")
++            return str(local_model)
++
+         mlx_model_map = {
+             "1.7B": "mlx-community/Qwen3-TTS-12Hz-1.7B-Base-bf16",
+             "0.6B": "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
+@@ -82,6 +92,8 @@
+         return hf_model_id
+ 
+     def _is_model_cached(self, model_size: str) -> bool:
++        if os.environ.get("ASTEL_VOICEBOX_MODEL_ROOT"):
++            return (Path(os.environ["ASTEL_VOICEBOX_MODEL_ROOT"]) / model_size / "config.json").is_file()
+         return is_model_cached(
+             self._get_model_path(model_size),
+             weight_extensions=(".safetensors", ".bin", ".npz"),
+@@ -233,7 +245,22 @@
+         Returns:
+             Tuple of (audio_array, sample_rate)
+         """
+-        logger.info("Generating audio for text: %s", text)
++        # Base cloning must never degrade to an unrelated generated voice.
++        if not isinstance(voice_prompt, dict):
++            raise ValueError("A reference voice prompt is required")
++        ref_audio = voice_prompt.get("ref_audio") or voice_prompt.get("ref_audio_path")
++        ref_text = voice_prompt.get("ref_text")
++        if not ref_audio or not Path(ref_audio).is_file():
++            raise ValueError("Reference audio is missing; cloning aborted")
++        if not isinstance(ref_text, str) or not ref_text.strip():
++            raise ValueError("An exact reference transcript is required")
++        if instruct:
++            raise ValueError("Delivery instructions are unsupported by this MLX Base clone path")
++        if language not in LANGUAGE_CODE_TO_NAME:
++            raise ValueError("Unsupported clone language")
++        if not text.strip():
++            raise ValueError("Narration text is empty")
++        logger.info("Generating reference-conditioned audio")
+ 
+         def _generate_sync():
+             """Run synchronous generation in thread pool."""
+@@ -254,57 +281,36 @@
+                     np.random.seed(seed)
+                     mx.random.seed(seed)
+ 
+-                # Extract voice prompt info
+-                ref_audio = voice_prompt.get("ref_audio") or voice_prompt.get("ref_audio_path")
+-                ref_text = voice_prompt.get("ref_text", "")
+-
+-                # Validate that the audio file exists
+-                if ref_audio and not Path(ref_audio).exists():
+-                    logger.warning("Audio file not found: %s", ref_audio)
+-                    logger.warning("This may be due to a cached voice prompt referencing a deleted temp file.")
+-                    logger.warning("Regenerating without voice prompt.")
+-                    ref_audio = None
+-
+-                # Inference runs with the process's default HF_HUB_OFFLINE
+-                # state. Forcing offline here (previously used to avoid lazy
+-                # mlx_audio lookups hanging when the network drops mid-inference,
+-                # issue #462) regressed online users because libraries make
+-                # legitimate metadata calls during generation.
+-                try:
+-                    if ref_audio:
+-                        # Check if generate accepts ref_audio parameter
+-                        import inspect
+-
+-                        sig = inspect.signature(model.generate)
+-                        if "ref_audio" in sig.parameters:
+-                            # Generate with voice cloning
+-                            for result in model.generate(text, ref_audio=ref_audio, ref_text=ref_text, lang_code=lang):
+-                                audio_chunks.append(np.array(result.audio))
+-                                sample_rate = result.sample_rate
+-                        else:
+-                            # Fallback: generate without voice cloning
+-                            for result in model.generate(text, lang_code=lang):
+-                                audio_chunks.append(np.array(result.audio))
+-                                sample_rate = result.sample_rate
+-                    else:
+-                        # No voice prompt, generate normally
+-                        for result in model.generate(text, lang_code=lang):
+-                            audio_chunks.append(np.array(result.audio))
+-                            sample_rate = result.sample_rate
+-                except Exception as e:
+-                    # If voice cloning fails, try without it
+-                    logger.warning("Voice cloning failed, generating without voice prompt: %s", e)
+-                    for result in model.generate(text, lang_code=lang):
+-                        audio_chunks.append(np.array(result.audio))
+-                        sample_rate = result.sample_rate
++                # Require the tested cloning API, including its transcript.
++                parameters = inspect.signature(model.generate).parameters
++                if not {"ref_audio", "ref_text"}.issubset(parameters):
++                    raise RuntimeError("Loaded model does not expose the required cloning API")
++                # The shared mlx-audio API can also route to presets/designs.
++                # Require the Base ICL encoder path, not merely matching kwargs.
++                if getattr(getattr(model, "config", None), "tts_model_type", None) != "base":
++                    raise RuntimeError("Required cloning needs a Qwen Base model")
++                if not getattr(getattr(model, "speech_tokenizer", None), "has_encoder", False):
++                    raise RuntimeError("Required cloning needs the speech reference encoder")
++                if getattr(model, "speaker_encoder", None) is None:
++                    raise RuntimeError("Required cloning needs the speaker encoder")
++                # Recheck on the MLX worker after any model load delay.
++                if not Path(ref_audio).is_file():
++                    raise ValueError("Reference audio disappeared; cloning aborted")
++                # Errors, including failures after a yielded chunk, propagate.
++                # There is exactly one attempt and no unconditioned retry.
++                for result in model.generate(text, ref_audio=ref_audio, ref_text=ref_text, lang_code=lang):
++                    audio_chunks.append(np.array(result.audio))
++                    sample_rate = result.sample_rate
+ 
+                 # Concatenate all chunks
+                 if audio_chunks:
+                     audio = np.concatenate([np.asarray(chunk, dtype=np.float32) for chunk in audio_chunks])
+                 else:
+-                    # Fallback: empty audio
+-                    audio = np.array([], dtype=np.float32)
+-
++                    raise RuntimeError("Clone produced no audio")
++                if audio.size == 0 or not np.isfinite(audio).all() or not np.any(audio):
++                    raise RuntimeError("Clone produced empty, silent or non-finite audio")
++                if not isinstance(sample_rate, (int, np.integer)) or sample_rate <= 0:
++                    raise RuntimeError("Clone produced an invalid sample rate")
+                 return audio, sample_rate
+             finally:
+                 # Drop the local binding here, inside the frame a propagating

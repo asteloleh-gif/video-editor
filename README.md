@@ -1,5 +1,9 @@
 # Battle Box AutoEditor
 
+## Voicebox local voice pilot
+
+The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox Qwen MLX API runtime and an Astel reference/manifest adapter. See [Voicebox setup and next steps](docs/voicebox/README.md) and [source audit](docs/voicebox/RESEARCH.md). Own-voice quality acceptance is pending; editor and publishing integration follow that test.
+
 ## OpenReel integration candidate — Mac first
 
 The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.

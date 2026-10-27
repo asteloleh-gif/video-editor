@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-27",
+  "branch": "integration/voicebox-local-first",
+  "upstream": {
+    "repository": "https://github.com/jamiepine/voicebox",
+    "commit": "8af7efe62fab8d33e2a5dfbedabaa45f68a5184f",
+    "backend_sha256": "9306547cdfd826b71ff5b028dd8035b5883e5bf8b3e5de0ef81aff6939cded58",
+    "patch_sha256": "fbc9bb8abcc1c9837ba4556a374d895706920f3273686fd463b73cd344a07a40",
+    "scope": "API-only Qwen MLX pilot; upstream desktop is not installed"
+  },
+  "model": {
+    "repository": "mlx-community/Qwen3-TTS-12Hz-0.6B-Base-bf16",
+    "revision": "1eccf1cb2519b5a4e8a95b5f0544f3303568164f",
+    "bytes": 2516143009,
+    "license": "Apache-2.0",
+    "files": [
+      {
+        "file": "model.safetensors",
+        "bytes": 1829344448,
+        "sha256": "d7c7ed3e3464e3e59de0f955b3755891fa8319ff061c3f0307fe2e1343bc122d"
+      },
+      {
+        "file": "speech_tokenizer/model.safetensors",
+        "bytes": 682293092,
+        "sha256": "836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258"
+      }
+    ]
+  },
+  "environment": {
+    "platform": "macOS arm64",
+    "memory_gib": 16,
+    "python": "3.12.14",
+    "runtime_home": "~/.local/share/astel-voicebox",
+    "desktop_installed": false,
+    "autostart_installed": false
+  },
+  "checks": {
+    "voicebox_adapter_backend_and_http_contract": {
+      "passed": 28,
+      "warnings": 19,
+      "inference_model": "deterministic fake; real upstream routes, queue, patched backend and WAV storage"
+    },
+    "existing_astel_openreel_timeline_learning": {
+      "passed": 11
+    },
+    "python_compileall": "passed",
+    "shell_syntax": "passed",
+    "ffmpeg_reference_preparation": {
+      "passed": true,
+      "raw_preserved": true,
+      "existing_output_refused": true
+    },
+    "weight_sha256_checks": "passed"
+  },
+  "live_smoke": {
+    "mcp": {
+      "tools": [
+        "voicebox_speak",
+        "voicebox_transcribe",
+        "voicebox_list_captures",
+        "voicebox_list_profiles"
+      ],
+      "list_profiles_error": false,
+      "list_profiles_data": {
+        "profiles": []
+      }
+    },
+    "model_load": {
+      "status": 200,
+      "result": {
+        "message": "Model 0.6B loaded successfully"
+      },
+      "seconds": 3.034
+    },
+    "health": {
+      "status": "healthy",
+      "model_loaded": true,
+      "model_downloaded": null,
+      "model_size": "0.6B",
+      "gpu_available": true,
+      "gpu_type": "MPS (Apple Silicon)",
+      "vram_used_mb": null,
+      "backend_type": "mlx",
+      "backend_variant": "cpu",
+      "supports_rocm": false,
+      "gpu_compatibility_warning": null,
+      "cloud_enabled": false
+    },
+    "marker": {
+      "service": "astel-voicebox",
+      "required_clone": true,
+      "supported_engine": "qwen",
+      "instruct_supported": false,
+      "upstream_commit": "8af7efe62fab8d33e2a5dfbedabaa45f68a5184f",
+      "patched_backend_sha256": "212419ddeddf54368893b6f9de10f507010af31152fa34b7215ad8747c979251",
+      "model_06b_present": true,
+      "model_06b_revision": "1eccf1cb2519b5a4e8a95b5f0544f3303568164f"
+    }
+  },
+  "limitations": [
+    "No own-voice reference/profile yet",
+    "No live TTS inference or voice-quality/English-accent evaluation",
+    "Model load timing is not TTS speed",
+    "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
+    "MCP discovery/read tested locally; Voicebox not configured as this chat connector",
+    "No editor, Drive watcher or publishing integration in this phase",
+    "Upstream declares transformers 5.x requirements for mlx-audio/mlx-lm; reviewed upstream no-deps workaround used with 4.57.6"
+  ],
+  "publishing_changed": false
+}

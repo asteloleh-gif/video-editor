@@ -1,3 +1,6 @@
 [submodule "vendor/openreel"]
 	path = vendor/openreel
 	url = https://github.com/Augani/openreel-video.git
+[submodule "vendor/voicebox"]
+	path = vendor/voicebox
+	url = https://github.com/jamiepine/voicebox.git
