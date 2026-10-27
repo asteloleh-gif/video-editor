@@ -107,7 +107,7 @@
   },
   "limitations": [
     "Owner recognizes own voice in the short Russian pilot; longer speech and production readiness unaccepted",
-    "Owner recognizes own voice in the English pilot and selected English reference B as foundation; pacing and cleaner delivery refinement requested",
+    "English slowed 53-second long form accepted for test; audible pauses and prosody need refinement; Russian long-form listening pending",
     "Reference transcript is an ASR/script candidate; owner verification pending",
     "Model load timing is not TTS speed",
     "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
@@ -166,7 +166,7 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "Owner recognizes longer English voice but finds 1.20 tempo uncomfortable; 15-percent-slower 53-second candidate awaits owner listening"
+      "next_step": "English slowed long form accepted for test; Russian 62-second long-form pilot completed and awaits owner listening"
     },
     "english_reference_comparison": {
       "source_recording_received": true,
@@ -222,12 +222,13 @@
       "audio_sha256": "7dd072c5a3a52d21d78328b25f75c58de4b56c9a18de87c3ef3dffca58522806",
       "human_assessment": "owner_recognizes_own_voice_and_pacing_matches_usual_speech",
       "acceptance_scope": "provisional_working_baseline_for_this_short_English_sample",
-      "longer_speech_validated": false,
+      "longer_speech_validated": true,
       "longer_speech_technical_smoke_completed": true,
       "original_B_preserved": true,
       "reference_files_modified": false,
       "media_committed": false,
-      "production_approved": false
+      "production_approved": false,
+      "longer_speech_validation_scope": "53-second listening-002 accepted for test only; different tempo 1.02, not short-pilot 1.20; prosody refinement remains"
     },
     "english_long_form_pilot": {
       "artifact": "pilot-004-en-long",
@@ -264,8 +265,10 @@
         "loudness_lufs": -21.86,
         "full_scale_samples": 0,
         "source_and_previous_audition_preserved": true,
-        "human_assessment": "pending_owner_listening"
-      }
+        "human_assessment": "owner_accepted_for_test; readout-like delivery and audible pauses still need refinement"
+      },
+      "test_accepted_audition": "listening-002: tempo 1.02 relative to untouched generation; 53.34 seconds",
+      "prosody_refinement": "Owner describes readout-like delivery; subtitle punctuation is separate from audible phrasing"
     },
     "english_tempo_comparison_002": {
       "source": "Original English-reference pilot B; no cumulative time stretching",
@@ -292,6 +295,39 @@
       "human_voice_identity_naturalness_and_pacing_assessment": "pending_owner_listening",
       "media_committed": false,
       "production_approved": false
+    },
+    "russian_long_form_pilot": {
+      "artifact": "pilot-005-ru-long",
+      "script_type": "fictional_listening_test",
+      "script_words": 152,
+      "reference_profile": "Oleh RU",
+      "reference_language": "ru",
+      "output_language": "ru",
+      "engine": "qwen",
+      "model_size": "0.6B",
+      "seed": 42,
+      "nominal_upstream_chunks": 2,
+      "duration_seconds": 62.06316666666667,
+      "postprocessing_tempo": 1.0,
+      "tempo_modified": false,
+      "filters": "highpass=f=60:p=2; linear gain matching",
+      "loudness_lufs": -22.07,
+      "true_peak_dbfs": -2.0,
+      "full_scale_samples": 0,
+      "nonfinite_samples": 0,
+      "asr_word_error_rate_proxy": 0.02631578947368421,
+      "asr_alignment_edit_count": 4,
+      "asr_scope": "Four alignment edits; may reflect ASR or synthesis; not a human pronunciation or identity score",
+      "cli_elapsed_seconds": 313.8582216670038,
+      "timing_scope": "entire generation CLI, includes validation, queue, inference, polling, transfer and storage; not pure model inference",
+      "accepted_short_Russian_baseline_sha256_preserved": true,
+      "original_generation_preserved": true,
+      "reference_binding_verified": true,
+      "intonation_cues": "wording and punctuation only; instruct unset",
+      "human_assessment": "pending_owner_listening_Russian_long_form",
+      "media_committed": false,
+      "production_approved": false,
+      "published": false
     }
   }
 }
