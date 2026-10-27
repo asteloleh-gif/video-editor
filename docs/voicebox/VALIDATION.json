@@ -107,7 +107,7 @@
   },
   "limitations": [
     "Owner recognizes own voice in the short Russian pilot; longer speech and production readiness unaccepted",
-    "English pilot generated from Russian reference; English likeness, accent and fluency await owner listening",
+    "Owner recognizes own voice in the English pilot; accent and delivery refinement requested",
     "Reference transcript is an ASR/script candidate; owner verification pending",
     "Model load timing is not TTS speed",
     "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
@@ -164,8 +164,9 @@
       "sample_rate": 24000,
       "digital_full_scale_samples": 0,
       "asr_check": "All content recovered; contraction expansion we are versus we're",
-      "identity_acceptance": "pending_owner_english_listening",
-      "accent_and_fluency": "pending_owner_listening"
+      "identity_acceptance": "owner_recognized_voice_en_short_pilot",
+      "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
+      "next_step": "compare with a separate owner English recording; accepted baseline preserved"
     }
   }
 }
