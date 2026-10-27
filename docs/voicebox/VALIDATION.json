@@ -107,7 +107,7 @@
   },
   "limitations": [
     "Owner recognizes own voice in the short Russian pilot; longer speech and production readiness unaccepted",
-    "Owner recognizes own voice in the English pilot; accent and delivery refinement requested",
+    "Owner recognizes own voice in the English pilot and selected English reference B as foundation; pacing and cleaner delivery refinement requested",
     "Reference transcript is an ASR/script candidate; owner verification pending",
     "Model load timing is not TTS speed",
     "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
@@ -166,7 +166,7 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "English-reference candidate completed; awaiting owner A/B choice"
+      "next_step": "English-reference B selected as foundation; faster mastering candidate C awaits owner listening"
     },
     "english_reference_comparison": {
       "source_recording_received": true,
@@ -184,7 +184,28 @@
       "asr_word_error_rate_proxy_contractions_normalized": 0.0,
       "audition_loudness_target_lufs": -21.02,
       "audition_processing": "linear gain only; original generation WAVs preserved",
-      "human_voice_identity_and_accent_assessment": "pending_owner_A_B_listening",
+      "human_voice_identity_and_accent_assessment": "owner_recognizes_own_voice_and_selected_english_reference_as_foundation; pacing_and_cleaner_delivery_refinement_requested",
+      "media_committed": false,
+      "production_approved": false
+    },
+    "english_mastering_comparison": {
+      "source": "English-reference pilot B; original generation preserved",
+      "new_tts_generation": false,
+      "tempo_factor": 1.08,
+      "filters": "highpass=f=60:p=2,atempo=1.08",
+      "spectral_denoising": false,
+      "phonetic_accent_correction": false,
+      "reference_files_modified": false,
+      "duration_seconds": 10.291458333333333,
+      "sample_rate": 24000,
+      "full_scale_samples": 0,
+      "asr_word_error_rate_proxy_contractions_normalized": 0.0,
+      "audition_loudness_lufs": {
+        "B": -21.06,
+        "C": -21.02
+      },
+      "original_A_and_B_sha256_preserved": true,
+      "human_voice_identity_naturalness_and_pacing_assessment": "pending_owner_listening",
       "media_committed": false,
       "production_approved": false
     }
