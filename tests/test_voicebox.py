@@ -43,12 +43,13 @@ def local(tmp_path):
             state["posts"].append(json.loads(request.content))
             if state.get("ambiguous"):
                 raise httpx.ReadTimeout("Accepted, then connection lost", request=request)
-            return httpx.Response(200, json={"id": "g1"})
-        if path == "/history/g1":
-            result = {**state["posts"][0], "id": "g1", "status": state["result_status"]}
+            return httpx.Response(200, json={"id": f"g{len(state['posts'])}"})
+        if path.startswith("/history/g"):
+            index = int(path.removeprefix("/history/g")) - 1
+            result = {**state["posts"][index], "id": f"g{index + 1}", "status": state["result_status"]}
             result.update(state.get("result_override", {}))
             return httpx.Response(200, json=result)
-        if path == "/audio/g1":
+        if path.startswith("/audio/g"):
             return httpx.Response(200, content=state["audio"])
         raise AssertionError(f"Unexpected request: {request.method} {path}")
 
@@ -118,6 +119,28 @@ def test_pending_resume_never_posts_again(local, tmp_path):
     state["result_status"] = "completed"
     assert client.resume(output)["status"] == "completed"
     assert len(state["posts"]) == 1
+
+
+def test_russian_reference_defaults_to_russian_and_can_generate_english(local, tmp_path):
+    client, binding, _, state = local
+    contents = json.loads(binding.read_text())
+    contents["reference_language"] = "ru"
+    binding.write_text(json.dumps(contents))
+    state["profile"]["language"] = "ru"
+    text = "Привет! Это мой голос. Проверяем русский язык."
+    result = client.generate(binding, text, tmp_path / "ru")
+    assert result["request"]["language"] == "ru"
+    assert (tmp_path / "ru/script.txt").read_text() == text
+    result = client.generate(binding, "Hello, my friend.", tmp_path / "en", language="en")
+    assert result["request"]["language"] == "en"
+    assert result["binding"]["profile_id"] == contents["profile_id"]
+
+
+def test_invalid_language_is_rejected_before_submitting(local, tmp_path):
+    client, binding, _, state = local
+    with pytest.raises(ValueError, match="supports English"):
+        client.generate(binding, "Hello.", tmp_path / "v1", language="invalid")
+    assert not state["posts"]
 
 
 @pytest.mark.parametrize("problem", ["failed", "wrong_text", "empty_audio"])

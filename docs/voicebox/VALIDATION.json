@@ -36,7 +36,7 @@
   },
   "checks": {
     "voicebox_adapter_backend_and_http_contract": {
-      "passed": 28,
+      "passed": 31,
       "warnings": 19,
       "inference_model": "deterministic fake; real upstream routes, queue, patched backend and WAV storage"
     },
@@ -50,7 +50,15 @@
       "raw_preserved": true,
       "existing_output_refused": true
     },
-    "weight_sha256_checks": "passed"
+    "weight_sha256_checks": "passed",
+    "bilingual_contract": {
+      "languages": [
+        "ru",
+        "en"
+      ],
+      "same_reference_cross_language": "passed with deterministic fake inference; listening pending",
+      "cyrillic_text_and_transcript_preserved": true
+    }
   },
   "live_smoke": {
     "mcp": {
@@ -106,5 +114,9 @@
     "No editor, Drive watcher or publishing integration in this phase",
     "Upstream declares transformers 5.x requirements for mlx-audio/mlx-lm; reviewed upstream no-deps workaround used with 4.57.6"
   ],
-  "publishing_changed": false
+  "publishing_changed": false,
+  "languages_supported_by_adapter": [
+    "ru",
+    "en"
+  ]
 }

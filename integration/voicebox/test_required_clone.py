@@ -39,11 +39,12 @@ def clone(tmp_path):
     return backend, {"ref_audio": str(reference), "ref_text": "Exact reference."}, calls
 
 
-def test_clone_always_receives_audio_and_exact_transcript(clone):
+@pytest.mark.parametrize("language,model_language", [("en", "english"), ("ru", "russian")])
+def test_clone_always_receives_audio_and_exact_transcript(clone, language, model_language):
     backend, prompt, calls = clone
-    audio, rate = asyncio.run(backend.generate("Hello.", prompt))
+    audio, rate = asyncio.run(backend.generate("Hello.", prompt, language=language))
     assert rate == 24000 and audio.size == 2
-    assert calls == [("Hello.", prompt["ref_audio"], prompt["ref_text"], "english")]
+    assert calls == [("Hello.", prompt["ref_audio"], prompt["ref_text"], model_language)]
 
 
 @pytest.mark.parametrize("problem", ["missing", "none", "empty_transcript", "instruct", "language"])

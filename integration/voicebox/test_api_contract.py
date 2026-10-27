@@ -35,7 +35,7 @@ def test_profile_upload_queue_generation_and_artifact(tmp_path, monkeypatch):
         speaker_encoder = object()
 
         def generate(self, text, ref_audio, ref_text, lang_code):
-            calls.append({"text": text, "ref_audio": ref_audio, "ref_text": ref_text})
+            calls.append({"text": text, "ref_audio": ref_audio, "ref_text": ref_text, "language": lang_code})
             yield SimpleNamespace(audio=0.15 * np.sin(np.arange(24000) * 0.1), sample_rate=24000)
 
     backend = MLXTTSBackend("0.6B")
@@ -58,13 +58,21 @@ def test_profile_upload_queue_generation_and_artifact(tmp_path, monkeypatch):
             reference = tmp_path / "reference.wav"
             sf.write(reference, 0.15 * np.sin(np.arange(72000) * 0.1), 24000)
             binding = tmp_path / "binding.json"
-            client.register(reference, "Exact fixture reference.", binding, "QA fixture")
-            result = client.generate(binding, "Fixture integration test.", tmp_path / "v1", timeout=30)
+            transcript = "Это точный текст тестового образца."
+            registered = client.register(reference, transcript, binding, language="ru")
+            profile = server.get(f"/profiles/{registered['profile_id']}").json()
+            assert profile["language"] == "ru" and profile["name"] == "Oleh RU"
+            text = "Привет, друг! Проверяем русский голос."
+            result = client.generate(binding, text, tmp_path / "v1", timeout=30)
             assert result["status"] == "completed"
             assert result["qa_status"] == "awaiting_owner_listening"
-            assert calls[0]["ref_text"] == "Exact fixture reference."
-            assert calls[0]["text"] == "Fixture integration test."
+            assert calls[0]["ref_text"] == transcript
+            assert calls[0]["text"] == text
+            assert calls[0]["language"] == "russian"
             assert len(calls) == 1
+            client.generate(binding, "Hello, my friend.", tmp_path / "en-v1", language="en", timeout=30)
+            assert calls[1]["language"] == "english"
+            assert calls[1]["ref_text"] == transcript
             # A changed upstream sample is detected before another job is sent.
             sample_id = result["binding"]["sample"]["id"]
             response = server.put(f"/profiles/samples/{sample_id}", json={"reference_text": "Changed."})
@@ -72,6 +80,6 @@ def test_profile_upload_queue_generation_and_artifact(tmp_path, monkeypatch):
             import pytest
             with pytest.raises(ValueError, match="transcript changed"):
                 client.generate(binding, "Another test.", tmp_path / "v2")
-            assert len(calls) == 1
+            assert len(calls) == 2
         finally:
             client.close()

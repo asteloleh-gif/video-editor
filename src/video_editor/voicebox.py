@@ -77,7 +77,9 @@ class LocalVoicebox:
             raise ValueError("Reference audio is missing or outside this local runtime")
         return path
 
-    def register(self, reference: Path, transcript: str, binding: Path, name="Oleh EN"):
+    def register(self, reference: Path, transcript: str, binding: Path, name=None, *, language="en"):
+        if language not in ("en", "ru"):
+            raise ValueError("This pilot supports English (en) and Russian (ru)")
         marker = self.marker()
         if not reference.is_file() or reference.stat().st_size > 50 * 1024 * 1024:
             raise ValueError("A local reference file of at most 50 MB is required")
@@ -92,9 +94,9 @@ class LocalVoicebox:
         with binding.open("x") as stream:
             stream.write('{"status":"registering"}\n')
         binding.chmod(0o600)
-        receipt = {"status": "registering", "runtime": marker, "original_reference_sha256": sha256(reference.read_bytes())}
+        receipt = {"status": "registering", "runtime": marker, "reference_language": language, "original_reference_sha256": sha256(reference.read_bytes())}
         try:
-            response = self.client.post("/profiles", json={"name": name, "language": "en", "voice_type": "cloned", "default_engine": "qwen"})
+            response = self.client.post("/profiles", json={"name": name or f"Oleh {language.upper()}", "language": language, "voice_type": "cloned", "default_engine": "qwen"})
             response.raise_for_status()
             receipt["profile_id"] = response.json()["id"]
             write_json(binding, receipt)
@@ -128,18 +130,23 @@ class LocalVoicebox:
         samples = self.get(f"/profiles/{key}/samples")
         if profile.get("voice_type") != "cloned" or profile.get("effects_chain") or profile.get("personality"):
             raise ValueError("Pilot requires a cloned profile without effects or personality rewriting")
+        if "reference_language" in binding and profile.get("language") != binding["reference_language"]:
+            raise ValueError("Profile language changed; create a new binding")
         if samples != [binding["sample"]]:
             raise ValueError("Reference samples or transcript changed; create a new binding")
         if sha256(self.stored_sample(samples[0]).read_bytes()) != binding["reference_sha256"]:
             raise ValueError("Reference audio changed; generation aborted")
         return binding
 
-    def generate(self, binding_path: Path, text: str, output: Path, *, model_size="0.6B", seed=42, timeout=1800):
+    def generate(self, binding_path: Path, text: str, output: Path, *, language=None, model_size="0.6B", seed=42, timeout=1800):
         binding = self.verify_binding(binding_path)
+        language = language or binding.get("reference_language", "en")
+        if language not in ("en", "ru"):
+            raise ValueError("This pilot supports English (en) and Russian (ru)")
         if not text.strip() or len(text) > 5000 or model_size not in ("0.6B", "1.7B") or seed < 0:
             raise ValueError("Use nonempty pilot text up to 5000 characters, a Base model and a nonnegative seed")
         output.mkdir(parents=True, mode=0o700, exist_ok=False)
-        request = {"profile_id": binding["profile_id"], "text": text, "language": "en", "engine": "qwen", "model_size": model_size, "seed": seed, "personality": False, "instruct": None, "effects_chain": [], "normalize": True}
+        request = {"profile_id": binding["profile_id"], "text": text, "language": language, "engine": "qwen", "model_size": model_size, "seed": seed, "personality": False, "instruct": None, "effects_chain": [], "normalize": True}
         receipt = {"status": "submitting", "created_at": datetime.now(timezone.utc).isoformat(), "request": request, "request_sha256": sha256(json.dumps(request, sort_keys=True).encode()), "binding": binding, "qa_status": "awaiting_owner_listening"}
         (output / "script.txt").write_text(text)
         write_json(output / "manifest.json", receipt)
@@ -217,13 +224,15 @@ def main():
     register.add_argument("--reference", type=Path, required=True)
     register.add_argument("--transcript", type=Path, required=True)
     register.add_argument("--binding", type=Path, required=True)
-    register.add_argument("--name", default="Oleh EN")
+    register.add_argument("--name")
+    register.add_argument("--language", choices=("en", "ru"), default="en", help="Language of the reference recording")
     generate = commands.add_parser("generate")
     generate.add_argument("--binding", type=Path, required=True)
     generate.add_argument("--script", type=Path, required=True)
     generate.add_argument("--output", type=Path, required=True)
     generate.add_argument("--model-size", choices=("0.6B", "1.7B"), default="0.6B")
     generate.add_argument("--seed", type=int, default=42)
+    generate.add_argument("--language", choices=("en", "ru"), help="Output language; defaults to the reference language")
     resume = commands.add_parser("resume")
     resume.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -235,9 +244,9 @@ def main():
         if args.command == "doctor":
             result = {"astel": client.marker(), "voicebox": client.get("/health"), "profiles": client.get("/profiles")}
         elif args.command == "register":
-            result = client.register(args.reference, args.transcript.read_text(), args.binding, args.name)
+            result = client.register(args.reference, args.transcript.read_text(), args.binding, args.name, language=args.language)
         elif args.command == "generate":
-            result = client.generate(args.binding, args.script.read_text(), args.output, model_size=args.model_size, seed=args.seed)
+            result = client.generate(args.binding, args.script.read_text(), args.output, language=args.language, model_size=args.model_size, seed=args.seed)
         else:
             result = client.resume(args.output)
         print(json.dumps(result, ensure_ascii=False, indent=2))
