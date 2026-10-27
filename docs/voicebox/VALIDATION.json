@@ -106,9 +106,9 @@
     }
   },
   "limitations": [
-    "Own-voice likeness and speech quality await owner listening",
+    "Owner recognizes own voice in the short Russian pilot; longer speech and production readiness unaccepted",
+    "English pilot generated from Russian reference; English likeness, accent and fluency await owner listening",
     "Reference transcript is an ASR/script candidate; owner verification pending",
-    "No English own-voice inference or accent evaluation yet",
     "Model load timing is not TTS speed",
     "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
     "MCP discovery/read tested locally; Voicebox not configured as this chat connector",
@@ -137,7 +137,7 @@
       "duration_seconds": 5.68,
       "sample_rate": 24000,
       "completed": true,
-      "identity_acceptance": "pending_owner_listening"
+      "identity_acceptance": "owner_recognized_voice_ru_short_pilot"
     },
     "output_asr_check": {
       "model": "mlx-community/whisper-small-mlx",
@@ -147,6 +147,25 @@
       "note": "One word substitution by ASR; this is not an identity or human quality score"
     },
     "private_media_committed": false,
-    "published": false
+    "published": false,
+    "owner_feedback": {
+      "assessment": "recognizes_own_voice",
+      "scope": "short_russian_pilot_only",
+      "production_approval": false
+    },
+    "cross_language_english_pilot": {
+      "engine": "qwen",
+      "model_size": "0.6B",
+      "output_language": "en",
+      "reference_language": "ru",
+      "same_profile": true,
+      "completed": true,
+      "duration_seconds": 9.04,
+      "sample_rate": 24000,
+      "digital_full_scale_samples": 0,
+      "asr_check": "All content recovered; contraction expansion we are versus we're",
+      "identity_acceptance": "pending_owner_english_listening",
+      "accent_and_fluency": "pending_owner_listening"
+    }
   }
 }
