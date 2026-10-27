@@ -324,10 +324,35 @@
       "original_generation_preserved": true,
       "reference_binding_verified": true,
       "intonation_cues": "wording and punctuation only; instruct unset",
-      "human_assessment": "pending_owner_listening_Russian_long_form",
+      "human_assessment": "owner_reports_very_strong_voice_resemblance; perceived_nasal_timbre_and_fuller_voiceover_tone_refinement_requested",
       "media_committed": false,
       "production_approved": false,
-      "published": false
+      "published": false,
+      "tonal_analysis_and_comparison": {
+        "artifact": "tone-001",
+        "analysis_engine": "Praat 6.1.38 via praat-parselmouth 0.4.7",
+        "analysis_library_isolated": true,
+        "Praat_GUI_installed": false,
+        "reference_and_source_preserved": true,
+        "diagnostic_nasality_score": null,
+        "diaphragm_or_breathing_assessment": null,
+        "pitch_estimate_scope": "search-range sensitive acoustic estimates; no clinical or attractiveness conclusion",
+        "new_TTS_generation": false,
+        "excerpt_seconds": 16.125,
+        "tempo_or_pitch_shift": false,
+        "B_filters": "equalizer=f=180:t=q:w=0.8:g=2.5,equalizer=f=1100:t=q:w=1:g=-2,acompressor=threshold=0.15:ratio=1.6:attack=15:release=140:knee=2.828:makeup=1",
+        "filters_selection": "creative tonal listening trial; not measured diagnosis or treatment",
+        "loudness_lufs": {
+          "A": -22.06,
+          "B": -22.09
+        },
+        "full_scale_samples": {
+          "A": 0,
+          "B": 0
+        },
+        "human_tonal_preference_and_identity_assessment": "pending_owner_AB_listening",
+        "audio_uploaded": false
+      }
     }
   }
 }
