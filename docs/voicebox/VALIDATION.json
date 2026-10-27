@@ -166,7 +166,7 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "F at 1.20 tempo accepted as provisional English working baseline; 45-second longer pilot completed and awaits owner listening for identity, pacing and intonation"
+      "next_step": "Owner recognizes longer English voice but finds 1.20 tempo uncomfortable; 15-percent-slower 53-second candidate awaits owner listening"
     },
     "english_reference_comparison": {
       "source_recording_received": true,
@@ -252,10 +252,20 @@
       "reference_binding_verified": true,
       "accepted_short_baseline_sha256_preserved": true,
       "intonation_cues": "semantic wording and punctuation only; instruct unset",
-      "human_voice_identity_pacing_and_intonation_assessment": "pending_owner_listening",
+      "human_voice_identity_pacing_and_intonation_assessment": "owner_recognizes_own_voice_but_1.20_pacing_uncomfortable; intonation_not_separately_accepted",
       "media_committed": false,
       "production_approved": false,
-      "published": false
+      "published": false,
+      "slower_listening_candidate": {
+        "artifact": "listening-002",
+        "tempo_relative_to_previous_audition": 0.85,
+        "tempo_relative_to_untouched_generation": 1.02,
+        "duration_seconds": 53.34158333333333,
+        "loudness_lufs": -21.86,
+        "full_scale_samples": 0,
+        "source_and_previous_audition_preserved": true,
+        "human_assessment": "pending_owner_listening"
+      }
     },
     "english_tempo_comparison_002": {
       "source": "Original English-reference pilot B; no cumulative time stretching",
