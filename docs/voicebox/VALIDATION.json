@@ -166,7 +166,7 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "English-reference B selected as foundation; owner recognizes C but finds pacing still too slow; D/E tempo candidates await owner listening"
+      "next_step": "F at 1.20 tempo accepted as provisional English working baseline; validate longer speech and other texts before production integration"
     },
     "english_reference_comparison": {
       "source_recording_received": true,
@@ -206,6 +206,25 @@
       },
       "original_A_and_B_sha256_preserved": true,
       "human_voice_identity_naturalness_and_pacing_assessment": "owner_recognizes_own_voice_but_pacing_still_too_slow; overall_naturalness_unaccepted",
+      "media_committed": false,
+      "production_approved": false
+    },
+    "english_working_baseline": {
+      "variant": "F",
+      "artifact": "mastering-003",
+      "reference_profile": "Oleh EN",
+      "tempo_relative_to_original_B": 1.2,
+      "processing": "highpass=f=60:p=2,atempo=1.20; linear loudness matching",
+      "model_speed_parameter": false,
+      "duration_seconds": 9.274625,
+      "loudness_lufs": -21.02,
+      "full_scale_samples": 0,
+      "audio_sha256": "7dd072c5a3a52d21d78328b25f75c58de4b56c9a18de87c3ef3dffca58522806",
+      "human_assessment": "owner_recognizes_own_voice_and_pacing_matches_usual_speech",
+      "acceptance_scope": "provisional_working_baseline_for_this_short_English_sample",
+      "longer_speech_validated": false,
+      "original_B_preserved": true,
+      "reference_files_modified": false,
       "media_committed": false,
       "production_approved": false
     },
