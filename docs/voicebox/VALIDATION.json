@@ -166,7 +166,27 @@
       "asr_check": "All content recovered; contraction expansion we are versus we're",
       "identity_acceptance": "owner_recognized_voice_en_short_pilot",
       "accent_and_fluency": "refinement_requested: smoother English with lighter Russian accent",
-      "next_step": "compare with a separate owner English recording; accepted baseline preserved"
+      "next_step": "English-reference candidate completed; awaiting owner A/B choice"
+    },
+    "english_reference_comparison": {
+      "source_recording_received": true,
+      "source_duration_seconds": 30.272,
+      "reference_duration_seconds": 14.3,
+      "reference_profile": "Oleh EN",
+      "reference_language": "en",
+      "output_language": "en",
+      "engine": "qwen",
+      "model_size": "0.6B",
+      "seed": 42,
+      "duration_seconds": 11.12,
+      "same_script_and_model_settings_as_baseline": true,
+      "baseline_preserved": true,
+      "asr_word_error_rate_proxy_contractions_normalized": 0.0,
+      "audition_loudness_target_lufs": -21.02,
+      "audition_processing": "linear gain only; original generation WAVs preserved",
+      "human_voice_identity_and_accent_assessment": "pending_owner_A_B_listening",
+      "media_committed": false,
+      "production_approved": false
     }
   }
 }
