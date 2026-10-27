@@ -106,8 +106,9 @@
     }
   },
   "limitations": [
-    "No own-voice reference/profile yet",
-    "No live TTS inference or voice-quality/English-accent evaluation",
+    "Own-voice likeness and speech quality await owner listening",
+    "Reference transcript is an ASR/script candidate; owner verification pending",
+    "No English own-voice inference or accent evaluation yet",
     "Model load timing is not TTS speed",
     "Only Qwen MLX API subset validated; other engines, transcription and dictation unvalidated",
     "MCP discovery/read tested locally; Voicebox not configured as this chat connector",
@@ -118,5 +119,34 @@
   "languages_supported_by_adapter": [
     "ru",
     "en"
-  ]
+  ],
+  "own_voice_pilot": {
+    "date": "2026-10-27",
+    "reference_provided_by_owner": true,
+    "uploaded_files_identical_bytes": true,
+    "profile": "Oleh RU",
+    "reference_duration_seconds": 10.05,
+    "reference_processing": "linear gain plus mono 24kHz PCM16; originals preserved",
+    "source_peak_dbfs": -22.104,
+    "source_loudness_lufs": -42.06,
+    "source_digital_full_scale_samples": 0,
+    "live_tts_generation": {
+      "engine": "qwen",
+      "model_size": "0.6B",
+      "language": "ru",
+      "duration_seconds": 5.68,
+      "sample_rate": 24000,
+      "completed": true,
+      "identity_acceptance": "pending_owner_listening"
+    },
+    "output_asr_check": {
+      "model": "mlx-community/whisper-small-mlx",
+      "revision": "45f3915923c7a79a5a5b5a7d909d39aeb0e5630e",
+      "package": "mlx-whisper==0.4.3",
+      "word_error_rate_proxy": 0.08333333333333333,
+      "note": "One word substitution by ASR; this is not an identity or human quality score"
+    },
+    "private_media_committed": false,
+    "published": false
+  }
 }
