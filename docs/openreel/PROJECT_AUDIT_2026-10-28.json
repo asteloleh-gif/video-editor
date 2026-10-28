@@ -1,0 +1,348 @@
+{
+  "checked_at": "2026-10-28T20:27:44.858345+00:00",
+  "base_commit": "55f3ab656f10a866c0f9524b34ca3ba0186e0baa",
+  "branch": "integration/voicebox-local-first",
+  "scope": "read-only runtime/upstream audit plus repository planning documents; no content generation, asset download or publishing",
+  "runtime": {
+    "branch_head": "55f3ab6",
+    "app_exists": true,
+    "installed_patch_matches": true,
+    "coordinator_matches": true,
+    "disk_free_gib": 18.8,
+    "registered_packages": [
+      {
+        "id": "amazon-3d-9589ee7",
+        "revision": "6cca86f5032a0c281ef043c56374cf5085dc1548f630b192c9f481453634a4fd"
+      }
+    ],
+    "jobs": [
+      {
+        "id": "3735c2c8-e1ad-411f-b305-0600148929f4",
+        "status": "ready",
+        "progress": 1,
+        "package_id": "amazon-3d-9589ee7"
+      },
+      {
+        "id": "faaf73a8-2c85-4720-adf2-a7715269abf1",
+        "status": "cancelled",
+        "progress": 0,
+        "package_id": "amazon-3d-9589ee7"
+      },
+      {
+        "id": "802957e2-a9c7-4257-b646-c9d8ce86c8ee",
+        "status": "ready",
+        "progress": 1,
+        "package_id": "amazon-3d-9589ee7"
+      }
+    ],
+    "package_integrity": "passed",
+    "voicebox_health": {
+      "status": "healthy",
+      "model_loaded": true,
+      "model_downloaded": null,
+      "model_size": "0.6B",
+      "gpu_available": true,
+      "gpu_type": "MPS (Apple Silicon)",
+      "vram_used_mb": null,
+      "backend_type": "mlx",
+      "backend_variant": "cpu",
+      "supports_rocm": false,
+      "gpu_compatibility_warning": null,
+      "cloud_enabled": false
+    },
+    "desktop_mcp_before_launch": {
+      "available": false,
+      "error_type": "FileNotFoundError"
+    },
+    "desktop_mcp": {
+      "available": true,
+      "project": {
+        "id": "cdbfe580-c082-4dce-b9df-000d313f9721",
+        "name": "Astel — сборка Amazon 3D",
+        "settings": {
+          "width": 1080,
+          "height": 1920,
+          "fps": 30
+        }
+      },
+      "tracks": 1,
+      "clips": 1,
+      "tool_count": 311
+    }
+  },
+  "search": {
+    "ok": true,
+    "count": 10,
+    "from_cache": false,
+    "seconds": 1.2,
+    "results": [
+      {
+        "id": "K9o3F6q7u9k",
+        "title": "The Story of Amazon: From Books to a Global Shopping Giant (1994–2026)"
+      },
+      {
+        "id": "tM2f15B17uM",
+        "title": "How Amazon Started With Books and Changed the World"
+      },
+      {
+        "id": "4MSSiXYD4mU",
+        "title": "How Jeff Bezos Built Amazon: From Books to AWS Explained"
+      }
+    ],
+    "scope": "metadata only; no download"
+  },
+  "renders": [
+    {
+      "id": "3735c2c8-e1ad-411f-b305-0600148929f4",
+      "hash_verified": true,
+      "sha256": "b28298c8b14a8081851e8ea2e5d0bcce77abe3c2463b45e4c04ff06b904694ea",
+      "bytes": 19974441,
+      "duration": 62.314667,
+      "video": [
+        [
+          1080,
+          1920,
+          "h264"
+        ]
+      ],
+      "audio": [
+        "aac"
+      ]
+    },
+    {
+      "id": "802957e2-a9c7-4257-b646-c9d8ce86c8ee",
+      "hash_verified": true,
+      "sha256": "bc88106e88d80103a44ab2d94b81e3153af6b6721919d61a1484b7455e1a0455",
+      "bytes": 19974442,
+      "duration": 62.314667,
+      "video": [
+        [
+          1080,
+          1920,
+          "h264"
+        ]
+      ],
+      "audio": [
+        "aac"
+      ]
+    }
+  ],
+  "upstream": [
+    {
+      "repository": "Augani/openreel-video",
+      "default_branch": "main",
+      "pushed_at": "2026-10-17T07:17:20Z",
+      "archived": false,
+      "sha": "367d7e90b61b5181f9861b852bb8b9d7a7d2954a",
+      "commit_date": "2026-10-17T07:17:20Z",
+      "subject": "Sync latest completed editor, audio, and export updates (#113)",
+      "license": "MIT"
+    },
+    {
+      "repository": "jamiepine/voicebox",
+      "default_branch": "main",
+      "pushed_at": "2026-10-07T01:17:58Z",
+      "archived": false,
+      "sha": "8af7efe62fab8d33e2a5dfbedabaa45f68a5184f",
+      "commit_date": "2026-10-07T01:17:56Z",
+      "subject": "Merge pull request #1168 from jamiepine/prep/pr-1062",
+      "license": "MIT"
+    },
+    {
+      "repository": "yt-dlp/yt-dlp",
+      "default_branch": "master",
+      "pushed_at": "2026-10-26T22:25:00Z",
+      "archived": false,
+      "sha": "f264a6cbd1f630894da0f368df00f8aae50140e0",
+      "commit_date": "2026-10-26T22:07:14Z",
+      "subject": "Release 2026.10.26",
+      "license": "Unlicense"
+    },
+    {
+      "repository": "heygen-com/hyperframes",
+      "default_branch": "main",
+      "pushed_at": "2026-10-28T20:12:38Z",
+      "archived": false,
+      "sha": "3ca1005a81e76565a69d5874371c857321b66d59",
+      "commit_date": "2026-10-28T19:05:59Z",
+      "subject": "feat(producer): report which element set the film length (#6689)",
+      "license": "Apache-2.0"
+    },
+    {
+      "repository": "Breakthrough/PySceneDetect",
+      "default_branch": "main",
+      "pushed_at": "2026-10-27T00:01:53Z",
+      "archived": false,
+      "sha": "36ca0229a898d6a25965f5f0b94c109c674833df",
+      "commit_date": "2026-10-25T22:58:13Z",
+      "subject": "[docs] Fix in-development location in changelog",
+      "license": "BSD-3-Clause"
+    }
+  ],
+  "openreel_upstream_delta": {
+    "checked_at": "2026-10-28T20:19:43.977411+00:00",
+    "base": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+    "head": "367d7e90b61b5181f9861b852bb8b9d7a7d2954a",
+    "status": "ahead",
+    "ahead_by": 1,
+    "behind_by": 0,
+    "total_commits": 1,
+    "subjects": [
+      {
+        "sha": "367d7e90b61b5181f9861b852bb8b9d7a7d2954a",
+        "date": "2026-10-17T07:17:20Z",
+        "subject": "Sync latest completed editor, audio, and export updates (#113)"
+      }
+    ],
+    "changed_files": [
+      ".gitignore",
+      "README.md",
+      "apps/web/docs/editor-fixes-2026-10-11.md",
+      "apps/web/docs/web-editor-next-priorities-2026-10-02.md",
+      "apps/web/docs/web-editor-review-2026-10-02.md",
+      "apps/web/docs/web-editor-review-2026-10-10.md",
+      "apps/web/index.html",
+      "apps/web/src/components/editor/EditorInterface.tsx",
+      "apps/web/src/components/editor/ExportDialog.test.tsx",
+      "apps/web/src/components/editor/ExportDialog.tsx",
+      "apps/web/src/components/editor/ExportProgressOverlay.tsx",
+      "apps/web/src/components/editor/Preview.tsx",
+      "apps/web/src/components/editor/PreviewTimecode.test.tsx",
+      "apps/web/src/components/editor/PreviewTimecode.tsx",
+      "apps/web/src/components/editor/ProjectPackageDialog.test.tsx",
+      "apps/web/src/components/editor/ProjectPackageDialog.tsx",
+      "apps/web/src/components/editor/ProjectSwitcher.test.tsx",
+      "apps/web/src/components/editor/ProjectSwitcher.tsx",
+      "apps/web/src/components/editor/Timeline.tsx",
+      "apps/web/src/components/editor/Toolbar.tsx",
+      "apps/web/src/components/editor/ai-workspace.css",
+      "apps/web/src/components/editor/chat/ChatErrorCard.test.ts",
+      "apps/web/src/components/editor/chat/ChatErrorCard.tsx",
+      "apps/web/src/components/editor/chat/ChatPanel.tsx",
+      "apps/web/src/components/editor/chat/EditSharingPanel.tsx",
+      "apps/web/src/components/editor/chat/ProviderModelPicker.test.tsx",
+      "apps/web/src/components/editor/chat/ProviderModelPicker.tsx",
+      "apps/web/src/components/editor/chat/ToolCallCard.tsx",
+      "apps/web/src/components/editor/editor-responsive.css",
+      "apps/web/src/components/editor/inspector/CaptionEditorPanel.test.tsx",
+      "apps/web/src/components/editor/inspector/CaptionEditorPanel.tsx",
+      "apps/web/src/components/editor/inspector/TextSection.tsx",
+      "apps/web/src/components/editor/inspector/tabs/AiTab.tsx",
+      "apps/web/src/components/editor/settings/AIConnectionPanel.test.tsx",
+      "apps/web/src/components/editor/settings/AIConnectionPanel.tsx",
+      "apps/web/src/components/editor/settings/AISettingsPanel.tsx",
+      "apps/web/src/components/editor/settings/GeneralPanel.tsx",
+      "apps/web/src/components/editor/settings/SettingsDialog.tsx",
+      "apps/web/src/components/editor/timeline/ClipComponent.tsx",
+      "apps/web/src/components/editor/timeline/ClipContextMenu.tsx",
+      "apps/web/src/components/editor/timeline/TimeRuler.tsx",
+      "apps/web/src/components/editor/timeline/Timeline.performance.test.tsx",
+      "apps/web/src/components/editor/timeline/Timeline.touch.test.tsx",
+      "apps/web/src/components/editor/timeline/TimelineRange.test.tsx",
+      "apps/web/src/components/editor/timeline/TimelineRange.tsx",
+      "apps/web/src/hooks/useProjectFonts.ts",
+      "apps/web/src/motion/components/StageCanvas.tsx",
+      "apps/web/src/services/agent/direct-llm-transport.test.ts",
+      "apps/web/src/services/agent/direct-llm-transport.ts",
+      "apps/web/src/services/agent/editing-session.test.ts",
+      "apps/web/src/services/agent/editing-session.ts",
+      "apps/web/src/services/agent/editing-tools.test.ts",
+      "apps/web/src/services/agent/editing-tools.ts",
+      "apps/web/src/services/agent/transition-tools.ts",
+      "apps/web/src/services/auto-save.test.ts",
+      "apps/web/src/services/auto-save.ts",
+      "apps/web/src/services/export-runner.ts",
+      "apps/web/src/services/font-catalog.ts",
+      "apps/web/src/services/project-fonts.test.ts",
+      "apps/web/src/services/project-fonts.ts"
+    ]
+  },
+  "tests": {
+    "fresh_python_scoped": {
+      "passed": 43,
+      "failed": 0
+    },
+    "prior_delivery_openreel_scoped": {
+      "passed": 37,
+      "rerun_this_audit": false
+    }
+  },
+  "connections": {
+    "local_desktop": "READ successful after starting installed candidate and opening saved QA project",
+    "cloud_openreel": "READ failed; gateway SSE probe HTTP 429; not attributed to editor code",
+    "asap_gta6": "capabilities read failed; tunnel client not seen",
+    "lazy_distribution": {
+      "read_capabilities": true,
+      "project": "copilot",
+      "live_routes": [
+        {
+          "brand": "astel.us",
+          "platform": "instagram"
+        },
+        {
+          "brand": "astel.us",
+          "platform": "threads"
+        },
+        {
+          "brand": "astel.u",
+          "platform": "instagram"
+        },
+        {
+          "brand": "astel.u",
+          "platform": "threads"
+        },
+        {
+          "brand": "leoakastel",
+          "platform": "instagram"
+        },
+        {
+          "brand": "leoakastel",
+          "platform": "threads"
+        }
+      ],
+      "metrics": {
+        "pending": 1,
+        "failed": 0,
+        "ambiguous": 0,
+        "confirmedSuccess": 1,
+        "attempts": 1,
+        "retries": 0,
+        "aiCalls": 0
+      },
+      "youtube_read": "Astel Family connected; upload path not tested"
+    }
+  },
+  "radar": {
+    "local_checkout": "/Users/oleh/Documents/Codex/2026-10-28/task/radar-acceptance",
+    "commit": "ef7d3ae",
+    "related_thread": "01a183a0-996b-76b0-9e0f-4400ea00f0f4",
+    "scope": "Threads/Instagram visible text evidence and local drafts; real adapter blocks media requests",
+    "operator_tools_visible_in_this_registry": false,
+    "live_tasks_or_login_tested_this_audit": false
+  },
+  "gaps": [
+    "search results -> acquired file -> persistent library -> editor import",
+    "generic new-topic StoryProject/package registration",
+    "measured background growth/ranking and batch topic scheduling",
+    "approved final media URL adapter to existing Hub",
+    "per-scene native editing/correction learning for story format"
+  ],
+  "recommended_order": [
+    "P0: preserve reviewed integration branch on GitHub separately from main; verify connection READ and evaluate upstream update separately",
+    "P1: topic -> selected available media -> acquisition -> library -> OpenReel",
+    "P2: generic new story from script/media -> voice/timing/captions -> render",
+    "P3: exact RenderArtifact -> delivery URL -> simulation/review in existing Hub",
+    "P4: bounded topic batches and recurring discovery after the one-topic path passes"
+  ],
+  "new_dependencies_installed": false,
+  "new_paid_services_connected": false,
+  "publishing_changed": false,
+  "voice_or_pilot_content_changed": false,
+  "git_backup": {
+    "local_branch": "integration/voicebox-local-first",
+    "local_commit": "55f3ab656f10a866c0f9524b34ca3ba0186e0baa",
+    "tracking_upstream": false,
+    "github_branch_lookup": "404 Branch not found",
+    "push_or_pr_performed": false
+  }
+}

@@ -16,6 +16,8 @@ A local Amazon story pilot now exercises reviewed source acquisition, the existi
 
 ## OpenReel integration candidate — Mac first
 
+Current verification and implementation order: [project audit and roadmap, 28 October 2026](docs/openreel/PROJECT_AUDIT_AND_ROADMAP_2026-10-28.md). The next product increment is a persistent source library and selected-file acquisition/import, followed by a generic new-story package.
+
 The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.
 
 AI-assisted short-form editing for Battle Box challenge footage.
