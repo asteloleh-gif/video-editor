@@ -81,7 +81,36 @@
     },
     "editorial_qa_note_saved_and_restored_after_service_restart": true,
     "owner_acceptance_called_by_agent": false,
-    "publication_endpoints_present": false
+    "publication_endpoints_present": false,
+    "wheel_scroll_fix": {
+      "cause": "Desktop grid auto minimum expanded content beyond viewport while body overflow was hidden",
+      "installed": true,
+      "private_source_html_unchanged": true,
+      "browser_mouse_wheel_test": {
+        "drafts_before_fix": {
+          "wheel_did_not_scroll": true
+        },
+        "drafts_after_fix": {
+          "initial": 0,
+          "after_down_500": 500,
+          "after_up_300": 200
+        },
+        "hub_wheel_over_video": {
+          "before": 611,
+          "delta": 150,
+          "after": 761
+        },
+        "content_planner": {
+          "main_height": 711,
+          "viewport_height": 711,
+          "content_height": 653,
+          "scroll_height": 7779,
+          "observed_scroll_top": 87.5
+        }
+      },
+      "verification": "Real wheel input and live browser geometry; no generated CSS unit tests",
+      "publishing_changed": false
+    }
   },
   "mcp": {
     "local_desktop_read": {
