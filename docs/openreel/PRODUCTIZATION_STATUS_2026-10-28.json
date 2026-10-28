@@ -2,11 +2,11 @@
   "date": "2026-10-28",
   "purpose": "Distinguish installed product functions from agent/terminal-assisted pilot work before choosing the next infrastructure stage",
   "verified_now": {
-    "candidate_app": "installed; native start screen visible with saved Amazon - pilot 01 and Vertical projects",
-    "installed_patch_matches_repository_search_and_voicebox_patch": true,
+    "candidate_app": "OpenReel Astel updated with native prepared-package assembly",
+    "installed_patch_matches_repository_search_and_voicebox_patch": "superseded by verified cumulative story-render patch",
     "voicebox_service": "healthy; model_loaded=true; backend=mlx; cloud_enabled=false",
-    "candidate_mcp": "responding; get_editor_state reports no project open",
-    "automatic_story_job_module": false
+    "candidate_mcp": "QA project import/undo/redo verified through local Desktop MCP",
+    "automatic_story_job_module": true
   },
   "functions": [
     {
@@ -31,14 +31,13 @@
     },
     {
       "name": "Amazon story and 3D montage",
-      "state": "agent-assisted source selection and Remotion code/commands",
-      "access": "local Remotion Studio plus repository scripts",
-      "user_terminal_needed": "agent currently performs preparation and build commands",
+      "state": "native assembly UI installed for frozen Amazon v2 package",
+      "access": "OpenReel Astel / AI Generate / Сборка ролика",
+      "user_terminal_needed": false,
       "limits": [
-        "reviewed source manifest",
-        "seven authored story scenes in original preparer",
-        "V2 editable preview; no native assembly UI",
-        "native OpenReel holds flattened V1 MP4 only"
+        "new-topic research/story preparation remains agent-assisted",
+        "MP4 imports as one flattened clip",
+        "no publishing handoff"
       ]
     },
     {
@@ -83,7 +82,8 @@
     "Own background discovery and acquisition library",
     "Approved artifact handoff to Lazy Distribution"
   ],
-  "owner_priority_question": "Pending asynchronous selection; no infrastructure subsystem chosen or mutated in this audit",
+  "owner_priority_question": "Owner selected native video assembly through OpenReel; implemented in STORY_ASSEMBLY.md",
   "pilot_quality_work": "remains paused; checkpoint and media unchanged",
-  "publishing_changed": false
+  "publishing_changed": false,
+  "assembly_validation": "STORY_ASSEMBLY_VALIDATION_2026-10-28.json"
 }

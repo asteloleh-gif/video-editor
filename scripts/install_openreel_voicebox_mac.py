@@ -23,6 +23,7 @@ HOME = Path.home() / ".local/share/astel-voicebox"
 PIN = "c9340465e5d37e684cc25bdbe746c4ccd45e165c"
 PATCH = REPO / "integration/voicebox/patches/0002-openreel-local-speech.patch"
 SEARCH_PATCH = REPO / "integration/video-search/0001-openreel-voicebox-and-search.patch"
+STORY_PATCH = REPO / "integration/story-render/0001-openreel-astel-assembly.patch"
 
 
 def run(args, **kwargs):
@@ -136,6 +137,7 @@ def main():
     parser.add_argument("--en-binding", type=Path)
     parser.add_argument("--bridge-only", action="store_true")
     parser.add_argument("--with-video-search", action="store_true", help="Include the free local YouTube search panel")
+    parser.add_argument("--with-story-render", action="store_true", help="Include Voicebox, search and durable prepared-package assembly")
     parser.add_argument("--built-source", type=Path, help="Use an already built and reviewed patched clone")
     parser.add_argument("--node", default=shutil.which("node"))
     parser.add_argument("--pnpm", default=shutil.which("pnpm"))
@@ -153,9 +155,11 @@ def main():
         parser.error("Node 22 or newer is required")
     if not args.built_source and not args.pnpm:
         parser.error("Supply --pnpm to build the pinned candidate")
-    patch = SEARCH_PATCH if args.with_video_search else PATCH
-    if args.with_video_search:
+    patch = STORY_PATCH if args.with_story_render else SEARCH_PATCH if args.with_video_search else PATCH
+    if args.with_video_search or args.with_story_render:
         run([sys.executable, REPO / "scripts/setup_video_search_mac.py"])
+    if args.with_story_render:
+        run([sys.executable, REPO / "scripts/setup_story_render_mac.py", "--node", args.node])
     source = args.built_source.resolve() if args.built_source else build_source(args.node, args.pnpm, patch)
     app = package(source, args.node, patch)
     print(json.dumps({"app": str(app), "bridge": str(root), "original_preserved": "/Applications/OpenReel.app"}, ensure_ascii=False, indent=2))

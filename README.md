@@ -6,6 +6,8 @@ The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox 
 
 ## Local video search in OpenReel Astel
 
+The Mac candidate also offers **AI Generate → Сборка ролика** for the frozen Amazon v2 package: local durable rendering, progress/cancel, MP4 preview/save and explicit timeline import. See [assembly workflow, architecture and setup](docs/openreel/STORY_ASSEMBLY.md). Preparing a new topic remains a separate step.
+
 The installed candidate includes **AI Generate → Найти видео**: YouTube topic search, thumbnails, duration filters, saved selections and TXT link export, with no paid search API. See [how to use and install](docs/openreel/VIDEO_SEARCH.md). Voicebox remains available beside it; this search feature does not download or publish videos.
 
 ## Topic-to-video pilot

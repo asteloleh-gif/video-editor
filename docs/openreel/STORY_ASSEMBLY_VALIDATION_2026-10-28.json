@@ -1,0 +1,104 @@
+{
+  "verified_at": "2026-10-28T17:39:16.817651+00:00",
+  "branch": "integration/voicebox-local-first",
+  "upstream_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "cumulative_patch_sha256": "477d321a312a67d5ba22b4697ed944548031e90f9de719b3454ebeb665901f02",
+  "installed_app": "/Users/oleh/Applications/OpenReel Astel.app",
+  "previous_candidate_backup": "/Users/oleh/.local/share/astel-openreel-voicebox/builds/before-assembly-20261028/OpenReel Astel.app",
+  "runtime": "/Users/oleh/.local/share/astel-story-render",
+  "package_revision": "6cca86f5032a0c281ef043c56374cf5085dc1548f630b192c9f481453634a4fd",
+  "checks": {
+    "python_scoped_tests": 43,
+    "openreel_desktop_scoped_tests": 26,
+    "openreel_web_timeline_tests": 11,
+    "web_typecheck": "passed",
+    "desktop_typecheck": "passed",
+    "web_desktop_build": "passed",
+    "desktop_tsup_build": "passed",
+    "cumulative_patch_applies_to_clean_pin": true,
+    "installed_patch_receipt_matches": true,
+    "codesign_verify_deep_strict": "passed",
+    "input_and_runtime_checksums": "passed",
+    "original_pilot_v1_and_v2_archive_unchanged": true,
+    "native_submit": "passed",
+    "native_cancel": "passed",
+    "native_close_during_render": "passed",
+    "native_reopen_and_ready_restore": "passed",
+    "native_video_import": "passed; one video track/clip with volume=1",
+    "native_undo_redo": "passed; zero then one clip",
+    "native_playback": "time advances; player unmuted",
+    "native_save": "passed; byte-identical to private job output",
+    "final_undo_button_state": "passed in final installed app: delete → Add enabled; Undo → Added disabled; saved project restore also shows Added",
+    "setup_from_frozen_zip": "passed; checksum-validated archive produces identical package revision",
+    "reinstall_without_ignored_preparation_files": "passed; verified installed package reused"
+  },
+  "renders": [
+    {
+      "job_id": "802957e2-a9c7-4257-b646-c9d8ce86c8ee",
+      "project_id": "296c6b86-261d-4adc-89f3-219565d100c0",
+      "status": "ready",
+      "bytes": 19974442,
+      "sha256": "bc88106e88d80103a44ab2d94b81e3153af6b6721919d61a1484b7455e1a0455",
+      "duration": 62.314667,
+      "render_wall_seconds": 153.06,
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "job_id": "3735c2c8-e1ad-411f-b305-0600148929f4",
+      "project_id": "cdbfe580-c082-4dce-b9df-000d313f9721",
+      "status": "ready",
+      "bytes": 19974441,
+      "sha256": "b28298c8b14a8081851e8ea2e5d0bcce77abe3c2463b45e4c04ff06b904694ea",
+      "duration": 62.314667,
+      "render_wall_seconds": 114.68,
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 1080,
+          "height": 1920
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    }
+  ],
+  "audio_qa": {
+    "mean_volume_db": -21.8,
+    "max_volume_db": -4.5,
+    "silence_or_clipping_detected": false,
+    "physical_speaker_listening": "not independently verified"
+  },
+  "video_qa": {
+    "full_first_output_decode": "passed with FFmpeg -v error",
+    "second_output_frame_17s": "3D book, title and captions visually inspected"
+  },
+  "delivered_mp4": "/Users/oleh/Movies/Astel-Pilots/Amazon-02-3D-2026-10-28/amazon-pilot-v2-openreel-20261028.mp4",
+  "limits": [
+    "one prepared Amazon package; new-topic preparation remains agent-assisted",
+    "flattened MP4 import; no per-scene OpenReel layers",
+    "reboot resumes via panel, not boot scheduler or frame-level checkpoint",
+    "base Python and Homebrew FFmpeg libraries must remain installed",
+    "Windows/Kevin and new public MCP tools not connected"
+  ],
+  "publishing_changed": false,
+  "voice_quality_or_reference_changed": false,
+  "screenshot": "output/story-assembly-qa/openreel-assembly.png"
+}
