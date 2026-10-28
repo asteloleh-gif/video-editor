@@ -1,0 +1,165 @@
+{
+  "date": "2026-10-27",
+  "decision": "Extend native OpenReel Text to Speech with local Voicebox provider and persistent Astel narration orchestration",
+  "status": "architecture_selected_for_next_implementation",
+  "implementation_status": "not_implemented_in_OpenReel",
+  "branch": "integration/voicebox-local-first",
+  "reviewed_source": {
+    "openreel_pinned": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+    "openreel_upstream_latest_reviewed": "367d7e90b61b5181f9861b852bb8b9d7a7d2954a",
+    "openreel_upstream_commit_date": "2026-10-17",
+    "voicebox_pinned": "8af7efe62fab8d33e2a5dfbedabaa45f68a5184f",
+    "submodule_checkout_changed": false,
+    "tts_files_unchanged_in_upstream_review": [
+      "apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx",
+      "apps/web/src/components/editor/inspector/hooks/useTtsActions.ts",
+      "apps/web/src/components/editor/inspector/AutoCaptionPanel.tsx",
+      "apps/web/src/workers/whisper-worker.ts"
+    ],
+    "upstream_provider_union": [
+      "elevenlabs"
+    ],
+    "paths": {
+      "panel": "apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx",
+      "tts_actions": "apps/web/src/components/editor/inspector/hooks/useTtsActions.ts",
+      "captions": "apps/web/src/components/editor/inspector/AutoCaptionPanel.tsx",
+      "whisper": "apps/web/src/workers/whisper-worker.ts",
+      "settings": "apps/web/src/stores/settings-store.ts",
+      "desktop_ipc": "apps/desktop/src/main/ipc/index.ts"
+    }
+  },
+  "reuse": [
+    "OpenReel TextToSpeechPanel",
+    "OpenReel media import and add-to-timeline UI integration, after ID contract validation",
+    "OpenReel editable subtitles and timeline",
+    "Astel required-clone Voicebox adapter and versioned artifacts",
+    "Existing local speech models and reviewed voice-processing settings"
+  ],
+  "implement": [
+    "Local Voicebox provider option without ElevenLabs key requirement",
+    "Typed desktop IPC to Astel local narration coordinator",
+    "Persistent background jobs independent of panel mount/unmount",
+    "Stable script-block IDs with measured audio versions",
+    "Timing and editable captions tied to final processed audio hash",
+    "Narration-to-shot-plan adapter using selected project media",
+    "Live timeline application with project identity, baseline change detection and undo/failure handling"
+  ],
+  "proposed_ui": {
+    "location": "existing Text to Speech panel",
+    "provider_label": "Voicebox — local",
+    "profile_aliases": [
+      "Oleh RU",
+      "Oleh EN"
+    ],
+    "primary_action": "Create narrated draft",
+    "controls": [
+      "script blocks",
+      "selected media",
+      "voice profile and reviewed processing preset",
+      "stage progress",
+      "preview result",
+      "regenerate selected passage"
+    ],
+    "configuration_location": "settings/diagnostics, not normal editing flow"
+  },
+  "local_connection": {
+    "path": [
+      "OpenReel renderer",
+      "typed Electron IPC",
+      "Astel narration coordinator",
+      "Voicebox REST"
+    ],
+    "chat_MCP_role": "optional control surface for the same job API; not a dependency of native UI generation",
+    "Voicebox_service_remains_separate": true,
+    "ElevenLabs_path_preserved": true,
+    "generic_cloud_proxy_reused_for_local_voice": false
+  },
+  "parallel_work": {
+    "may_run_together": [
+      "one Voicebox synthesis job",
+      "selected video metadata analysis and shot preparation"
+    ],
+    "dependencies": [
+      "synthesis -> tone/tempo processing -> final audio measurement -> alignment -> final captions and shot placement"
+    ],
+    "Mac_16GB_initial_inference_policy": "one heavy TTS/alignment model at a time; UI and lightweight asset work remain responsive"
+  },
+  "job_identity": [
+    "job_id",
+    "target_project_id",
+    "target_baseline_revision_or_fingerprint",
+    "script_block_ids",
+    "selected_media_ids",
+    "profile_binding_identity",
+    "model_identity",
+    "generation_ids",
+    "approved_script_hash",
+    "processing_settings",
+    "final_audio_hash",
+    "timing_version"
+  ],
+  "timing_policy": {
+    "canonical_clock": "final processed audio, with measured block durations",
+    "changing_audio_speed_invalidates_timing": true,
+    "caption_text": "approved script; ASR mismatches require review",
+    "first_milestone": "segment cues",
+    "word_timestamps": "separate validated alignment milestone; not claimed already implemented",
+    "frame_mapping": "explicit conversion from audio seconds to project timebase",
+    "single_block_regeneration": "new version; retime dependent shots/captions while preserving manual edits"
+  },
+  "working_voice_policy": {
+    "Russian": "Oleh RU; preferred tone B, provisionally accepted for test",
+    "English": "Oleh EN; independent pacing settings; short +20 percent is not a universal default",
+    "approved_text_rewriting": false,
+    "required_reference_binding_checks": true
+  },
+  "recovery_and_conflicts": [
+    "persist known generation IDs before polling",
+    "never silently re-POST an uncertain submission",
+    "distinguish UI detachment from backend cancellation",
+    "verify active project and baseline before applying results",
+    "preserve manual edits; do not silently overwrite changed tracks",
+    "write candidate/versioned artifacts and group verified mutations for undo",
+    "local-path media access through trusted desktop import, not a public file-serving workaround"
+  ],
+  "acceptance_tests_required": [
+    "UI generation with Voicebox and no ElevenLabs key",
+    "tab switching and process restart recovery",
+    "RU and EN text and binding integrity",
+    "retime after tempo adjustment",
+    "regenerate one passage without duplicating the job",
+    "human edit during generation triggers conflict handling",
+    "actual audio media IDs and caption timing verified in editor",
+    "partial failure leaves no unexplained partial timeline",
+    "actual local MP4 with AV and caption alignment checked"
+  ],
+  "validation_this_turn": [
+    "source and upstream history review",
+    "current upstream TTS provider contract checked",
+    "submodule pin preserved",
+    "decision metadata and documentation consistency checked"
+  ],
+  "not_claimed": [
+    "new UI implemented or installed",
+    "live Voicebox-to-OpenReel end-to-end connection tested",
+    "word-level forced alignment validated",
+    "generic semantic video selection already implemented",
+    "new build/typecheck/integration tests passed"
+  ],
+  "later_scope": [
+    "topic search and ingestion",
+    "face/lip-sync",
+    "Kevin/Windows execution",
+    "production publishing"
+  ],
+  "licenses": "Preserve OpenReel MIT, Voicebox MIT and existing third-party notices; no upstream code copied or removed in this decision",
+  "sources": [
+    "https://github.com/Augani/openreel-video/commit/367d7e90b61b5181f9861b852bb8b9d7a7d2954a",
+    "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx",
+    "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/hooks/useTtsActions.ts",
+    "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/AutoCaptionPanel.tsx",
+    "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/workers/whisper-worker.ts",
+    "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/stores/settings-store.ts",
+    "https://github.com/jamiepine/voicebox/tree/8af7efe62fab8d33e2a5dfbedabaa45f68a5184f"
+  ]
+}

@@ -40,6 +40,8 @@
 
 Следующий этап после приёмки: WAV → OpenReel или существующий renderer → проверенный MP4 → существующий Distribution Hub. Автопубликация, GTA6 cast и каналы этим пилотом не меняются.
 
+Решение по нативной интеграции от 27 октября: добавить локальный Voicebox provider в существующую OpenReel Text to Speech и связать его с отдельной фоновой задачей Astel для готового аудио, тайм-кодов, субтитров и нарезки. Сама панель Voicebox/автосборка ещё не реализована. Проверены pinned source и upstream от 17 октября; рабочий submodule и установленный редактор не обновлялись. Обоснование, точки расширения и критерии проверки: [Voicebox integration decision](../openreel/MIGRATION.md#voicebox-integration-decision--2026-10-27), [decision metadata](OPENREEL_INTEGRATION_DECISION.json).
+
 ## Что сохранено и изменено
 
 - `vendor/voicebox` — отдельный git submodule upstream, commit `8af7efe62fab8d33e2a5dfbedabaa45f68a5184f`. MIT license сохранена в submodule и `integration/voicebox/LICENSE.voicebox`.

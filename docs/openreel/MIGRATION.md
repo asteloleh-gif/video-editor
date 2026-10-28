@@ -101,6 +101,56 @@ Browser `packages/core/src/export/export-engine.ts` uses browser codecs/MediaBun
 8. Only after Mac A/B passes, Stage 2 Kevin/Windows: media-root mapping, worker claim/complete, desktop export and project relinking. Simulate Kevin offline; Mac must remain fully operational.
 9. Deprecate old editor/OpenCut only after round-trip, graphics and export gates pass. Nothing in this branch removes them.
 
+## Voicebox integration decision — 2026-10-27
+
+**Decision: extend OpenReel's existing Text to Speech panel with a local Voicebox provider and an Astel narration-job coordinator.** Keep Voicebox as a separate local service; OpenReel remains the editing UI. The same job API can later be exposed to chat through MCP. Generation and editing from the application must work independently of the cloud chat tunnel.
+
+This is an implementation decision, not an installed feature. The current branch has a working standalone Voicebox adapter and accepted test WAVs; it does not yet have the new OpenReel provider, persistent narration jobs, automatic caption/shot assembly, or a tested live timeline applier. The installed desktop application was not replaced in this review.
+
+### Evidence and reuse
+
+Reviewed the pinned checkout `c9340465e5d37e684cc25bdbe746c4ccd45e165c` and current upstream `367d7e90b61b5181f9861b852bb8b9d7a7d2954a` (2026-10-17). Upstream was fetched for inspection without changing the checked-out submodule commit. Voicebox upstream remains `8af7efe62fab8d33e2a5dfbedabaa45f68a5184f`.
+
+- `apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx` already provides text input, generation, preview and an audio result. `stores/settings-store.ts` still declares only `TtsProvider = "elevenlabs"` in current upstream. No built-in Voicebox provider was found in these paths.
+- `inspector/hooks/useTtsActions.ts` already imports generated audio and adds it to a new track. Reuse its editor integration after validating real media-ID semantics; do not reuse its ElevenLabs-only argument contract unchanged. The current hook aborts an in-flight request on component unmount, and `tts-store.ts` retains an in-memory Blob rather than a recoverable generation job. A provider dropdown alone does not meet the background-job requirement.
+- `AutoCaptionPanel.tsx` and `workers/whisper-worker.ts` already perform local transcription and map segment timestamps through clip trims/speed into subtitle positions. The worker requests segment timestamps, not validated word-level forced alignment. Do not interpret the UI's assigned `confidence: 1` as measured recognition confidence.
+- The panel, TTS action hook, caption panel and Whisper worker are unchanged between the pinned checkout and the reviewed upstream commit. Updating upstream alone will not add the proposed Voicebox workflow.
+- Reuse Astel's required-clone adapter, versioned artifacts and selected voice processing. The Russian tone B preference applies to Russian test audio; English has a separate reference and pacing history. The accepted short English speed factor is not a universal duration policy.
+
+### Application flow
+
+Inside Text to Speech, add provider **Voicebox — local**, profile **Oleh RU / Oleh EN**, script blocks and a primary action **Create narrated draft**. Selected source clips come from the current project's media library. Show stage progress and results inside the application; source paths, IPC and service configuration belong in settings and diagnostics.
+
+```text
+OpenReel panel -> typed desktop IPC -> Astel narration coordinator -> Voicebox REST
+                                     |                     |
+                              asset preparation      synthesis + tone/tempo
+                                     |                     |
+                                     |             final audio + alignment
+                                     +----------> editable timeline draft
+```
+
+Use typed Electron IPC with a dedicated local adapter rather than adding an arbitrary URL to the existing cloud-provider proxy. The coordinator must preserve reference/profile binding checks, exact approved script, model identity, seed and the one-submission/resume behavior already implemented by the Astel adapter. OpenReel's existing ElevenLabs path remains available.
+
+### Parallel work and timecodes
+
+Video metadata analysis, shot suggestions and planning may run while narration is being synthesized. Final shot placement and captions depend on the completed audio after all tone/tempo processing. On this 16 GB Mac, serialize heavy TTS and alignment inference initially rather than loading two competing models simultaneously.
+
+Persist a job with project ID, baseline revision/fingerprint, stable script-block IDs, selected asset IDs, generation IDs, settings and artifact hashes. Each completed block needs an actual measured audio duration. Alignment is tied to the final audio hash; changing speed or replacing a block invalidates affected timing. Use approved script text for captions, with alignment mismatches surfaced for review rather than silently adopting ASR substitutions. Segment-level cues are the first milestone; word highlighting needs separately validated word alignment.
+
+Stable block IDs permit regenerating one passage and retiming its dependent shots/captions. They do not yet exist in the standalone long-pilot generator. Preserve original speech, previous versions and manual edits. If the project changed during background processing, offer a new candidate or explicit conflict resolution; do not silently apply an old plan to the current timeline.
+
+### Delivery order and acceptance
+
+1. **Provider and background job:** generate from the native panel using existing local profiles, persist WAV/manifest, survive panel switching and recover known generation IDs without duplicate POSTs. Cancellation must distinguish a local abort, a queued cancellation and an active backend cancellation request.
+2. **Audio and captions:** auto-import the final WAV, create editable caption cues on its measured timeline, preserve accepted processing, and verify project identity, trims and speed handling. A failed operation must leave inspectable artifacts and no unexplained partial edits.
+3. **Narration-led draft:** map selected assets to script blocks, assemble editable video/audio/caption tracks, and verify undo/conflict handling. A generic commentary-to-shot planner is additional Astel logic; Battle Box event detection and ordinary clip tools alone do not provide it.
+4. **End-to-end validation:** UI -> local job -> actual WAV -> timing -> native timeline -> local MP4, including RU/EN text, corrected speed, regeneration of one passage, recovery after restart, a human timeline edit during generation, and AV/caption checks. Run relevant typechecks/builds and integration tests when implementation exists. This architecture review does not count as those tests passing.
+
+Keep local media as the first asset pool. Search/download automation, face/lip-sync, Kevin/Windows and Distribution publishing remain separate later work. Preserve MIT and bundled dependency notices. Detailed decision metadata: [OPENREEL_INTEGRATION_DECISION.json](../voicebox/OPENREEL_INTEGRATION_DECISION.json).
+
+Primary source reviewed: [OpenReel TTS panel at current upstream](https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx), [TTS action hook](https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/hooks/useTtsActions.ts), [caption panel](https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/components/editor/inspector/AutoCaptionPanel.tsx).
+
 ## Notices
 
 OpenReel's original MIT license remains at `vendor/openreel/LICENSE`, with an unchanged copy in `integration/openreel/licenses/OPENREEL-MIT.txt`. Preserve copyright and license in redistributed OpenReel code/binaries and any substantial copied code; keep third-party notices from packaged dependencies. Desktop also preserves `apps/desktop/LICENSES/FFMPEG.md`, `BLENDER.md`, `GPL-2.0.txt` and `GPL-3.0.txt`; OpenReel MIT does not replace those bundled-tool notices. No distributable binary was produced here. Astel currently has no repository LICENSE detected by GitHub: this branch does not invent or change Astel's licensing.
