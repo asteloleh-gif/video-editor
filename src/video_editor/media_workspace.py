@@ -133,7 +133,8 @@ class Workspace:
             row = db.execute("SELECT * FROM jobs WHERE id=?", (identifier(job_id),)).fetchone()
         if row is None:
             raise ValueError("Job not found")
-        return {**{k: row[k] for k in ("id", "kind", "status", "progress", "phase", "error", "created_at", "updated_at")}, "result": json.loads(row["result"] or "{}")}
+        return {**{k: row[k] for k in ("id", "kind", "status", "progress", "phase", "error", "created_at", "updated_at")}, "result": json.loads(row["result"] or "{}"),
+                **({"story_id": json.loads(row["payload"])["story_id"]} if row["kind"] == "handoff" else {})}
 
     def update(self, job_id, **values):
         allowed = {"status", "progress", "phase", "error", "result"}
@@ -149,7 +150,7 @@ class Workspace:
         if not isinstance(request, dict) or set(request) != {"id", "kind", "payload"}:
             raise ValueError("Invalid request")
         job_id = identifier(request["id"]); kind = request["kind"]; payload = request["payload"]
-        if kind not in {"search", "batch", "acquire", "story"} or not isinstance(payload, dict):
+        if kind not in {"search", "batch", "acquire", "story", "handoff"} or not isinstance(payload, dict):
             raise ValueError("Invalid job kind")
         expected = fingerprint({"kind": kind, "payload": payload})
         with self.db() as db:
@@ -176,6 +177,9 @@ class Workspace:
             if set(payload) != {"candidate_id"}:
                 raise ValueError("Select a candidate")
             self.candidate(payload["candidate_id"])
+        elif kind == "handoff":
+            from .hub_delivery import validate
+            validate(self, payload)
         else:
             required = {"title", "script", "asset_ids", "profile", "project_id"}
             if not required <= set(payload) or set(payload) - required - {"parent_story_id", "parent_digest"}:
@@ -239,6 +243,7 @@ class Workspace:
         return self.status(job_id)
 
     def worker(self, job_id, inherited_fd):
+        kind = None
         with os.fdopen(inherited_fd, "a") as handle:
             try:
                 while True:
@@ -260,17 +265,31 @@ class Workspace:
                     elif kind == "acquire":
                         asset = self.acquire(payload["candidate_id"], job_id)
                         self.update(job_id, result={"asset_id": asset["id"]})
+                    elif kind == "handoff":
+                        from .hub_delivery import perform
+                        perform(self, job_id, payload)
                     else:
                         from .story_workspace import build_story
                         build_story(self, job_id, payload, (handle.fileno(), gate.fileno()))
-                    self.cancelled(job_id)
+                    # A received Hub draft remains received if cancellation was
+                    # requested during the submit. This never cancels/publishes
+                    # a remote plan or hides an accepted request as "cancelled".
+                    if kind != "handoff": self.cancelled(job_id)
                     self.update(job_id, status="ready", progress=1, phase="Готово")
             except InterruptedError:
                 self.update(job_id, status="cancelled", phase="Остановлено")
-            except Exception:
+            except Exception as error:
                 import traceback
                 traceback.print_exc()
-                self.update(job_id, status="failed", phase="Ошибка", error="Задача не завершена. Данные сохранены; проверьте источники и локальные сервисы.")
+                message = "Задача не завершена. Данные сохранены; проверьте источники и локальные сервисы."
+                if kind == "handoff":
+                    from .hub_delivery import DeliveryError
+                    if isinstance(error, DeliveryError):
+                        message = {"DRIVE_REAUTHORIZE_LOCALLY_REQUIRED": "Нужно повторно войти в Google Drive на этом Mac. После входа нажмите «Продолжить передачу».",
+                                   "REMOTE_OUTCOME_UNCONFIRMED": "Ответ не подтверждён. Продолжение проверит тот же файл и ID Hub; новый черновик автоматически не создаётся.",
+                                   "PRIVATE_CONNECTION_REQUIRED": "Локальное подключение Hub или Drive ещё не настроено.",
+                                   "STALE_STORY_REVISION": "История изменилась. Выберите новую версию перед передачей."}.get(str(error), "Передача остановлена: " + str(error))
+                self.update(job_id, status="failed", phase="Ошибка", error=message)
 
     def save_candidate(self, data):
         key = str(uuid.uuid5(uuid.NAMESPACE_URL, data["provider"] + ":" + data["source_id"]))

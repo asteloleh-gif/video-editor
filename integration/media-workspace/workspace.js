@@ -1,5 +1,5 @@
-/* Local preparation adapter for the existing owner-supplied Canvas.
- * These cards are real Mac artifacts; they are not Hub publication plans.
+/* Local preparation and simulation handoff for the owner-supplied Canvas.
+ * The Hub remains the owner of delivery plans and publication approval.
  */
 (() => {
   'use strict';
@@ -11,10 +11,10 @@
   // navigation so existing sections and the new preparation view hide correctly.
   if(typeof navs!=='undefined')navs.unshift(nav);
   if(typeof pages!=='undefined')pages.push(page);
-  const old = document.querySelector('[data-page="distribution"]'); if (old) old.textContent = '▷ Hub · учебный экран';
-  const connect = document.getElementById('dc-connect'); if (connect) {connect.disabled = true; connect.title = 'Для серверного Hub нужен существующий защищённый Telegram-backend';}
-  let state = {stories: [], jobs: []}, selected = null, busy = false, error = '';
+  const old = document.querySelector('[data-page="distribution"]'); if (old) {old.textContent = '▷ Очередь Hub';const show=old.onclick;old.onclick=()=>{show?.();window.AstelCanvasDistribution?.connect();};}
+  let state = {stories: [], jobs: [], handoffs: []}, selected = null, busy = false, error = '', lastRefresh = 0;
   const notes = new Map(); const pendingKey = 'astel-canvas-editorial-pending-v1';
+  const drafts = new Map(); const handoffKey = 'astel-canvas-handoff-pending-v1';
   try {const saved=JSON.parse(localStorage.getItem(pendingKey)||'null');if(saved&&typeof saved.story_id==='string'&&typeof saved.digest==='string'&&typeof saved.note==='string'&&saved.note.length<=2000){selected=saved.story_id;notes.set(saved.digest,saved.note);}} catch {localStorage.removeItem(pendingKey);}
   const el = (tag, cls, text) => {const n=document.createElement(tag); if(cls)n.className=cls; if(text!==undefined)n.textContent=text; return n;};
   const button = (text, action, cls='action') => {const n=el('button',cls,text);n.type='button';n.onclick=action;return n;};
@@ -24,9 +24,56 @@
     if (!response.ok) throw Error(value.error || 'Локальная библиотека недоступна. Обновите страницу.');
     return value;
   }
+  window.AstelMacMedia=Object.create(null);window.AstelMacTitles=Object.create(null);
+  window.AstelMacHubReader=Object.freeze({
+    async list(){const seen=new Set(),rows=new Map();let cursor=null;for(let page=0;page<40;page++){const result=window.AstelDistributionCore.inbox(await api('/api/astel-workspace/hub/inbox'+(cursor?'?cursor='+encodeURIComponent(cursor):'')),'copilot');for(const item of result.items)rows.set(item.id,item);if(!result.nextCursor)return [...rows.values()];if(seen.has(result.nextCursor))throw Error('PAGINATION_LOOP');seen.add(result.nextCursor);cursor=result.nextCursor;}throw Error('INBOX_TOO_LARGE');},
+    async plan(id){if(!/^[a-f0-9]{64}$/.test(id))throw Error('INVALID_PLAN_ID');const p=window.AstelDistributionCore.normalize(await api('/api/astel-workspace/hub/plans/'+id),'copilot');if(p.id!==id||!p.full)throw Error('PLAN_IDENTITY_MISMATCH');return p;},
+    async metrics(){return window.AstelDistributionCore.metrics(await api('/api/astel-workspace/hub/metrics'));}
+  });
   async function refresh() {
-    try {state = await api('/api/astel-workspace');error='';if(!state.stories.some(s=>s.artifact_job_id===selected))selected=state.stories[0]?.artifact_job_id||null;render();}
+    try {state = await api('/api/astel-workspace');lastRefresh=Date.now();error='';for(const card of state.stories){const hash='sha256:'+card.artifact.sha256;window.AstelMacMedia[hash]='/api/astel-workspace/stories/'+encodeURIComponent(card.artifact_job_id)+'/video.mp4';window.AstelMacTitles[hash]=card.title;}if(!state.stories.some(s=>s.artifact_job_id===selected))selected=state.stories[0]?.artifact_job_id||null;render();}
     catch (e) {error=e.message;render();}
+  }
+  async function sendHandoff(card, draft) {
+    if(busy)return;busy=true;error='';
+    try {
+      const payload={story_id:card.artifact_job_id,digest:card.digest,account_key:draft.account_key,text:draft.text,scheduled_at:new Date(draft.when).toISOString()};
+      const saved=localStorage.getItem(handoffKey);const request=saved?JSON.parse(saved):{request_id:crypto.randomUUID(),...payload};
+      if(saved&&Object.keys(payload).some(k=>request[k]!==payload[k]))throw Error('Предыдущая передача ещё не подтверждена. Повторите её прежние настройки.');
+      localStorage.setItem(handoffKey,JSON.stringify(request));
+      await api('/api/astel-workspace/hub/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+      localStorage.removeItem(handoffKey);await refresh();
+    }catch(e){error=e.message;if(/rejected/i.test(error))localStorage.removeItem(handoffKey);}finally{busy=false;render();}
+  }
+  async function handoffAction(action, jobId) {
+    if(busy)return;busy=true;error='';
+    try{await api('/api/astel-workspace/hub/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:jobId})});await refresh();}
+    catch(e){error=e.message;}finally{busy=false;render();}
+  }
+  async function mediaAccess(item){
+    if(busy)return;busy=true;error='';
+    try{await api('/api/astel-workspace/hub/media-access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:item.job_id,story_digest:item.story_digest,artifact_sha256:item.artifact_sha256,consent:'anyone-with-link-readonly-final-mp4'})});await refresh();}
+    catch(e){error=e.message;}finally{busy=false;render();}
+  }
+  async function reconnectDrive(){
+    if(busy)return;busy=true;error='';
+    try{await api('/api/astel-workspace/drive/reauthorize',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await refresh();}
+    catch(e){error=e.message;}finally{busy=false;render();}
+  }
+  function handoffPanel(card) {
+    const panel=el('section','aw-review');panel.append(el('h4','','Передача в Lazy Distribution Hub'),el('p','muted','Создаём только тестовый черновик simulation. Эта кнопка не согласует материал, не запускает расписание и не публикует пост. MP4 сначала загружается в приватную папку доставки.'));
+    const linked=(state.handoffs||[]).filter(h=>h.story_id===card.artifact_job_id&&h.story_digest===card.digest);
+    for(const item of linked){panel.append(el('div','aw-status',item.submitted?`Hub подтвердил ${item.hub_state||'черновик'} · версия доставки ${item.revision}`:'Передача ожидает подтверждения'),el('p','aw-hash','Plan ID: '+item.expected_plan_id),el('p','muted',item.media_ready?'Копия MP4 доступна для чтения по ссылке.':'Копия MP4 приватная. Для серверного чтения нужен отдельный доступ к этому файлу; публикация остаётся выключена.'));panel.append(button('Проверить статус в Hub',()=>handoffAction('status',item.job_id)));}
+    for(const item of linked.filter(i=>i.submitted&&!i.media_ready)){const consent=el('input');consent.type='checkbox';const label=el('label','muted');label.append(consent,document.createTextNode(' Разрешаю любому, у кого есть ссылка, читать только эту готовую копию MP4 с моим синтезированным голосом, чтобы сервер Hub мог её получить. Папка и исходники остаются приватными.'));const grant=button('Разрешить чтение этой копии MP4',()=>mediaAccess(item));grant.disabled=true;consent.onchange=()=>{grant.disabled=busy||!consent.checked;};panel.append(el('p','aw-hash','Разрешение для SHA-256: '+item.artifact_sha256),label,grant);}
+    const jobs=state.jobs.filter(j=>j.kind==='handoff'&&j.story_id===card.artifact_job_id);for(const job of jobs.slice(0,3)){panel.append(el('p',job.error?'aw-error':'muted',job.phase+' · '+Math.round(job.progress*100)+'%'+(job.error?' · '+job.error:'')));if(job.status==='failed')panel.append(button('Продолжить передачу',()=>handoffAction('retry',job.id)));}
+    if(jobs.some(j=>j.status==='failed')){const auth=state.drive_authorization||{};if(auth.state==='authorizing'&&/^http:\/\/127\.0\.0\.1:[0-9]{1,5}\/authorize$/.test(auth.url||'')){const a=el('a','linkbtn','Открыть повторный вход Google Drive');a.href=auth.url;a.target='_blank';a.rel='noopener noreferrer';panel.append(a,el('p','muted','Вход использует прежнее подключение drive.file. Завершите его в Google, затем нажмите «Продолжить передачу».'));}else{panel.append(button('Повторно войти в Google Drive',reconnectDrive));if(auth.state==='completed')panel.append(el('p','aw-status','Вход завершён. Нажмите «Продолжить передачу».'));}}
+    let draft=drafts.get(card.digest);
+    if(!draft){const future=new Date(Date.now()+86400000);future.setMinutes(future.getMinutes()-future.getTimezoneOffset());draft={account_key:card.voice.profile==='oleh-en'?'leoakastel:instagram':'astel.u:instagram',text:card.title,when:future.toISOString().slice(0,16)};try{const p=JSON.parse(localStorage.getItem(handoffKey)||'null');if(p&&p.digest===card.digest){const date=new Date(p.scheduled_at);date.setMinutes(date.getMinutes()-date.getTimezoneOffset());draft={account_key:p.account_key,text:p.text,when:date.toISOString().slice(0,16)};}}catch{}drafts.set(card.digest,draft);}
+    const accountLabel=el('label','','Аккаунт тестового черновика'),account=el('select','aw-field');account.setAttribute('aria-label','Аккаунт Hub');for(const key of ['astel.u:instagram','leoakastel:instagram','astel.us:instagram']){const option=el('option','',key);option.value=key;account.append(option);}account.value=draft.account_key;account.onchange=()=>{draft.account_key=account.value;};accountLabel.append(account);
+    const textLabel=el('label','','Подпись черновика'),text=el('textarea','aw-note');text.maxLength=2200;text.value=draft.text;text.setAttribute('aria-label','Подпись для Hub');text.oninput=()=>{draft.text=text.value;};textLabel.append(text);
+    const timeLabel=el('label','','Время тестового слота (часовой пояс этого браузера)'),when=el('input','aw-field');when.type='datetime-local';when.value=draft.when;when.setAttribute('aria-label','Время тестового слота Hub');when.onchange=()=>{draft.when=when.value;};timeLabel.append(when);
+    const send=button('Передать тестовый черновик в Hub',()=>sendHandoff(card,draft));send.disabled=busy||card.state==='superseded'||jobs.some(j=>!['ready','failed','cancelled'].includes(j.status));
+    panel.append(accountLabel,textLabel,timeLabel,send);return panel;
   }
   async function review(card, decision, note) {
     if(busy)return;busy=true;error='';
@@ -56,7 +103,7 @@
     const latest=card.editorial_reviews?.[0];if(latest)r.append(el('div','aw-status',(latest.decision==='draft_accepted'?'Черновик принят для дальнейшей работы.':'Запрошена правка.')+(latest.note?' '+latest.note:'')));
     const label=el('label','','Замечание к этой версии'),note=el('textarea','aw-note');note.maxLength=2000;note.value=notes.get(card.digest)||'';note.setAttribute('aria-label','Замечание к видеочерновику');note.oninput=()=>notes.set(card.digest,note.value);label.append(note);r.append(label);
     const actions=el('div','aw-buttons');const change=button('Вернуть на правку',()=>review(card,'changes_requested',notes.get(card.digest)||''));const accept=button('Принять черновик',()=>review(card,'draft_accepted',notes.get(card.digest)||''));
-    change.disabled=accept.disabled=busy||card.state==='superseded';actions.append(change,accept);r.append(actions,el('p','aw-hash','Hub: не передан · разрешение публикации: отсутствует'));d.append(r);return d;
+    change.disabled=accept.disabled=busy||card.state==='superseded';actions.append(change,accept);r.append(actions,el('p','aw-hash','Редакторское решение не является разрешением на публикацию.'));d.append(r,handoffPanel(card));return d;
   }
   function render() {
     page.querySelectorAll('video').forEach(v=>v.pause());page.replaceChildren();
@@ -71,5 +118,5 @@
   nav.onclick=()=>{if(typeof go==='function')go('astel-preparation');void refresh();};
   nav.click();
   // Refresh preserves ongoing video playback and draft remarks.
-  setInterval(()=>{if(!document.hidden&&page.classList.contains('active')&&!busy&&!Array.from(page.querySelectorAll('video')).some(v=>!v.paused)&&!notes.size)void refresh();},60000);
+  setInterval(()=>{const running=state.jobs.some(j=>j.kind==='handoff'&&!['ready','failed','cancelled'].includes(j.status));if(Date.now()-lastRefresh>=(running?1800:60000)&&!document.hidden&&page.classList.contains('active')&&!busy&&!Array.from(page.querySelectorAll('video')).some(v=>!v.paused)&&!page.contains(document.activeElement?.matches('textarea,input,select')?document.activeElement:null))void refresh();},2000);
 })();

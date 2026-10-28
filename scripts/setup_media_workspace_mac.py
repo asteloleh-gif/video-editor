@@ -35,7 +35,7 @@ def main():
     if not python.exists(): subprocess.run([sys.executable, '-m', 'venv', str(HOME / 'venv')], check=True)
     subprocess.run([str(python), '-m', 'pip', 'install', '--require-hashes', '--no-deps', '-r', str(REPO / 'integration/video-search/requirements-mac.txt')], check=True, stdout=subprocess.DEVNULL)
     module = HOME / 'src/video_editor'; module.mkdir(parents=True, exist_ok=True)
-    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
+    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'hub_delivery.py', 'drive_delivery.py', 'drive_authorization.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
         source = REPO / 'src/video_editor' / name
         temporary = module / (name + '.install'); shutil.copyfile(source, temporary); temporary.chmod(0o600); temporary.replace(module / name)
     binary = HOME / 'bin/node'; binary.parent.mkdir(exist_ok=True)
@@ -70,7 +70,7 @@ def main():
         subprocess.run(['launchctl', 'bootout', domain + '/' + label], capture_output=True)
         agent.write_bytes(plistlib.dumps(config)); agent.chmod(0o600)
         subprocess.run(['launchctl', 'bootstrap', domain, str(agent)], check=True)
-        print('Local Canvas: http://127.0.0.1:17531/ (private Mac preparation; no Hub submission)')
+        print('Local Canvas: http://127.0.0.1:17531/ (simulation handoff; publishing disabled)')
     print('Astel media workspace installed; publishing disabled')
 
 

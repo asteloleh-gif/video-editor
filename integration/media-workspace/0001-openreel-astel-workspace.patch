@@ -589,7 +589,7 @@ index d2f62a9..e556390 100644
              icon={Mic}
 diff --git a/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx b/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx
 new file mode 100644
-index 0000000..a3506bc
+index 0000000..65bdce9
 --- /dev/null
 +++ b/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx
 @@ -0,0 +1,175 @@
@@ -760,7 +760,7 @@ index 0000000..a3506bc
 +      {snapshot.searches.map(item => <button key={item.id} className={`${button} w-full text-left`} onClick={() => {setActiveSearch(item.id); setQuery(item.query); setTab("library");}}>{item.query} · {item.candidates.length} кандидатов</button>)}
 +    </div>}
 +    {tab === "review" && <div className="space-y-3">
-+      <p>Готовые черновики для просмотра в Canvas.</p><button className={button} onClick={() => void api.openCanvas().catch(() => setError("Не удалось открыть Canvas на этом Mac."))}>Открыть Canvas на Mac</button><p className="text-xs text-text-secondary">Canvas показывает эти файлы и сохраняет замечания. Передача в серверный Hub ещё не подключена. Карточка содержит сценарий, источники, версию и хэш; просмотр и принятие черновика не разрешают публикацию.</p>
++      <p>Готовые черновики для просмотра в Canvas.</p><button className={button} onClick={() => void api.openCanvas().catch(() => setError("Не удалось открыть Canvas на этом Mac."))}>Открыть Canvas на Mac</button><p className="text-xs text-text-secondary">В Canvas можно просмотреть ролик, сохранить замечание и передать тестовый черновик в Hub. Доступ к копии MP4 разрешается отдельно. Просмотр и принятие черновика не разрешают публикацию.</p>
 +      {snapshot.stories.map(item => <button key={item.id} className={`${button} w-full text-left`} onClick={() => setStory(item)}>{item.title} · версия {item.revision} · {Math.round(item.duration)} с</button>)}
 +      {story && <div className="space-y-2"><p>{story.title}</p><p className="text-xs">Ожидает согласования · {story.artifact_sha256.slice(0, 12)}</p>{url && <video src={url} controls preload="metadata" className="w-full max-h-72 bg-black" />}<button className={button} disabled={!blob || busy} onClick={() => void save()}>Сохранить MP4…</button><button className={button} disabled={!blob || busy || story.project_id !== projectId} onClick={() => void addStory()}>Добавить ролик на таймлайн</button><button className={button} disabled={busy} onClick={() => void exportCard()}>Экспорт карточки Canvas…</button><button className={button} onClick={() => {setParent(story); setTitle(story.title); setScript(story.script); setProfile(story.profile); setSelected(Array.from(new Set(story.scenes.map(scene => scene.asset_id)))); setTab("story");}}>Править сценарий / новая версия</button></div>}
 +    </div>}

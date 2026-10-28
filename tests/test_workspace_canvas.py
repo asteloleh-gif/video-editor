@@ -58,7 +58,7 @@ def test_snapshot_is_preparation_only_and_has_no_paths(local):
     service, key, story, origin, cookie, request = local
     status, headers, body = request('/api/astel-workspace', cookie=cookie)
     value = json.loads(body)
-    assert status == 200 and not value['publishing_enabled'] and value['hub_connection']=='not_submitted'
+    assert status == 200 and not value['publishing_enabled'] and value['hub_connection']=='simulation_only'
     assert value['stories'][0]['title'] == story['title']
     assert str(service.home).encode() not in body
     assert value['stories'][0]['publication']['approved'] is False
@@ -83,3 +83,45 @@ def test_changed_owner_canvas_does_not_execute(local):
     service, key, story, origin, cookie, request = local
     (service.home / 'canvas/document.html').write_text('unreviewed change')
     assert request(cookie=cookie)[0]==409
+
+
+def test_hub_reader_proxy_has_fixed_actions_and_no_write_routes(local, monkeypatch):
+    service, key, story, origin, cookie, request = local
+    calls = []
+    class Reader:
+        def __init__(self, *, readonly): assert readonly is True
+        def read(self, action, **arguments):
+            calls.append((action, arguments)); return {'items': [], 'fixture': action}
+    monkeypatch.setattr('video_editor.hub_delivery.HubClient', Reader)
+    assert request('/api/astel-workspace/hub/inbox')[0] == 403
+    for path in ['/api/astel-workspace/hub/inbox?limit=100', '/api/astel-workspace/hub/inbox?cursor=bad', '/api/astel-workspace/hub/inbox?cursor='+'a'*64+'&cursor='+'b'*64]:
+        assert request(path, cookie=cookie)[0] == 409
+    assert not calls
+    for path in ['/api/astel-workspace/hub/inbox?cursor='+'a'*64, '/api/astel-workspace/hub/metrics', '/api/astel-workspace/hub/plans/'+'b'*64]:
+        assert request(path, cookie=cookie)[0] == 200
+    assert calls == [('inbox', {'limit': 25, 'cursor': 'a'*64}), ('metrics', {}), ('status', {'planId': 'b'*64})]
+    for action in ['approve', 'schedule', 'publish', 'cancel', 'review']:
+        assert request('/api/astel-workspace/hub/'+action, method='POST', data={}, cookie=cookie, Origin=origin)[0] == 404
+
+
+def test_handoff_post_requires_owner_origin_and_exact_fields(local, monkeypatch):
+    service, key, story, origin, cookie, request = local
+    calls = []
+    def submit(value): calls.append(value); return {'id': value['id'], 'status': 'queued'}
+    monkeypatch.setattr(service, 'submit', submit)
+    data = {'request_id': str(uuid.uuid4()), 'story_id': key, 'digest': story['digest'], 'account_key': 'astel.u:instagram', 'text': 'QA draft', 'scheduled_at': '2030-01-01T00:00:00Z'}
+    route = '/api/astel-workspace/hub/submit'
+    assert request(route, method='POST', data=data, cookie=cookie)[0] == 403
+    assert request(route, method='POST', data={**data, 'mode': 'live'}, cookie=cookie, Origin=origin)[0] == 409
+    assert not calls
+    assert request(route, method='POST', data=data, cookie=cookie, Origin=origin)[0] == 200
+    assert calls == [{'id': data['request_id'], 'kind': 'handoff', 'payload': {k:v for k,v in data.items() if k!='request_id'}}]
+
+
+def test_private_canvas_adapter_preserves_source_and_disables_approval_link():
+    source = "<html><head></head><body>await sdk();if(started reader=C.createReader({getInitData:initData}); if(mode==='hub'&&p.full&&!error)</body></html>"
+    adapted = canvas.adapt_document(source)
+    assert 'if(!window.AstelMacHubReader)await sdk()' in adapted
+    assert 'reader=window.AstelMacHubReader||C.createReader' in adapted
+    assert "p.full&&!error&&!window.AstelMacHubReader" in adapted
+    assert 'window.AstelMacHubReader' not in source

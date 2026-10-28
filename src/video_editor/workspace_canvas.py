@@ -1,7 +1,4 @@
-"""Private loopback preparation view inside the owner's existing Canvas.
-
-No Hub credentials, plan submission, publication approval or scheduler.
-"""
+"""Private Canvas view with editorial review and simulation-only Hub handoff."""
 from __future__ import annotations
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -9,7 +6,7 @@ import json
 from pathlib import Path
 import re
 import secrets
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 from .canvas_contract import review_card
 from .media_workspace import Workspace, identifier, timestamp
@@ -44,16 +41,40 @@ def editorial_review(service, request):
 
 
 def snapshot(service):
+    from .hub_delivery import records
     data = service.listing(); cards = []
     for story in data["stories"]:
         card = review_card(service, story["id"])
         card["editorial_reviews"] = [r for r in data["reviews"] if r["story_id"] == story["id"] and r["digest"] == story["digest"]]
         cards.append(card)
-    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "publishing_enabled": False, "hub_connection": "not_submitted", "local_only": True}
+    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "handoffs": records(service), "publishing_enabled": False, "hub_connection": "simulation_only", "local_only": True}
+
+
+def adapt_document(html):
+    # Keep the original private source pinned. Only replace reviewed hooks in
+    # its read-only Hub client; no owner token or approval API is introduced.
+    hooks = {
+        "await sdk();if(started": "if(!window.AstelMacHubReader)await sdk();if(started",
+        "reader=C.createReader({getInitData:initData});": "reader=window.AstelMacHubReader||C.createReader({getInitData:initData});",
+        "if(mode==='hub'&&p.full&&!error)": "if(mode==='hub'&&p.full&&!error&&!window.AstelMacHubReader)",
+        "  function title(p){return seed.titles?.[p.contentId]&&mode==='demo'?seed.titles[p.contentId]:p.contentId;}": "  function title(p){return seed.titles?.[p.contentId]&&mode==='demo'?seed.titles[p.contentId]:(window.AstelMacTitles?.[p.assets?.[0]?.digest]||p.contentId);}",
+        "  function makePlayer(container,a,p){": "  function makePlayer(container,a,p){\n    if(mode==='hub'&&window.AstelMacMedia?.[a.digest]){const v=el('video');v.controls=true;v.playsInline=true;v.preload='metadata';v.src=window.AstelMacMedia[a.digest];v.setAttribute('aria-label','Локальная копия точного MP4 из задания Hub');container.append(v,el('small','','Локальная копия с совпадающим SHA-256. Доступ сервера к Drive проверяется отдельно.'));return;}",
+        "Данные Hub через защищённый Telegram-backend. Здесь только просмотр; согласование — отдельно.": "Подтверждённые данные Hub. Этот экран только читает очередь; публикация через него выключена.",
+    }
+    for old, new in hooks.items():
+        if old not in html:
+            # Small unit fixtures do not contain the production Canvas client.
+            if 'AstelDistributionCore' in html: raise ValueError('Canvas integration hook changed')
+            continue
+        if html.count(old) != 1: raise ValueError('Ambiguous Canvas integration hook')
+        html = html.replace(old, new)
+    return html.replace('</head>', '<link rel="stylesheet" href="/workspace.css"></head>', 1).replace('</body>', '<script src="/workspace.js"></script></body>', 1)
 
 
 def create_server(service, port=PORT):
     session = secrets.token_urlsafe(32)
+    from .drive_authorization import DriveAuthorization
+    authorization = DriveAuthorization()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -104,14 +125,25 @@ def create_server(service, port=PORT):
                     source = service.home / "canvas/document.html"
                     if digest(source) != CANVAS_SHA:
                         raise ValueError("Canvas source differs from reviewed version")
-                    html = source.read_text().replace("</head>", '<link rel="stylesheet" href="/workspace.css"></head>', 1)
-                    html = html.replace("</body>", '<script src="/workspace.js"></script></body>', 1)
+                    html = adapt_document(source.read_text())
                     return self.send(200, html.encode(), "text/html; charset=utf-8", cookie=True)
                 if route in {"/workspace.js", "/workspace.css"}:
                     source = service.home / "canvas" / route[1:]
                     return self.send(200, source.read_bytes(), "text/javascript" if route.endswith(".js") else "text/css")
                 if route == "/api/astel-workspace":
-                    return self.send(200, snapshot(service))
+                    return self.send(200, {**snapshot(service), 'drive_authorization': authorization.status()})
+                if route.startswith('/api/astel-workspace/hub/'):
+                    from .hub_delivery import HubClient
+                    hub = HubClient(readonly=True)
+                    if route == '/api/astel-workspace/hub/inbox':
+                        query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                        if set(query) - {'cursor'} or any(len(v) != 1 for v in query.values()): raise ValueError('Invalid cursor')
+                        cursor = query.get('cursor', [None])[0]
+                        if cursor is not None and not re.fullmatch(r'[a-f0-9]{64}', cursor): raise ValueError('Invalid cursor')
+                        return self.send(200, hub.read('inbox', limit=25, **({'cursor': cursor} if cursor else {})))
+                    if route == '/api/astel-workspace/hub/metrics': return self.send(200, hub.read('metrics'))
+                    plan = re.fullmatch(r'/api/astel-workspace/hub/plans/([a-f0-9]{64})', route)
+                    if plan: return self.send(200, hub.read('status', planId=plan[1]))
                 match = re.fullmatch(r"/api/astel-workspace/stories/([a-f0-9-]{36})/(card|video\.mp4)", route)
                 if match:
                     key = identifier(match[1]); card = review_card(service, key)
@@ -148,13 +180,29 @@ def create_server(service, port=PORT):
         def do_POST(self):
             if not self.boundary(mutation=True):
                 return self.send(403, {"error": "Owner local session required"})
-            if self.path != "/api/astel-workspace/review":
+            if self.path not in {"/api/astel-workspace/review", "/api/astel-workspace/hub/submit", "/api/astel-workspace/hub/status", "/api/astel-workspace/hub/retry", "/api/astel-workspace/hub/media-access", "/api/astel-workspace/drive/reauthorize"}:
                 return self.send(404, {"error": "No publication or Hub mutations"})
             try:
                 size = int(self.headers.get("Content-Length", "0"))
                 if not 0 < size <= 12000 or self.headers.get("Content-Type") != "application/json":
                     raise ValueError("Invalid request size/type")
-                result = editorial_review(service, json.loads(self.rfile.read(size)))
+                body = json.loads(self.rfile.read(size))
+                if self.path == '/api/astel-workspace/drive/reauthorize':
+                    if body != {}: raise ValueError('Unexpected login fields')
+                    return self.send(200, authorization.start())
+                if self.path == '/api/astel-workspace/hub/media-access':
+                    from .hub_delivery import allow_media_reading
+                    return self.send(200, allow_media_reading(service, body))
+                if self.path == '/api/astel-workspace/hub/submit':
+                    if not isinstance(body, dict) or set(body) != {'request_id','story_id','digest','account_key','text','scheduled_at'}: raise ValueError('Invalid handoff')
+                    request_id = body.pop('request_id')
+                    return self.send(200, service.submit({'id': request_id, 'kind': 'handoff', 'payload': body}))
+                if self.path in {'/api/astel-workspace/hub/status','/api/astel-workspace/hub/retry'}:
+                    from .hub_delivery import refresh, retry
+                    if not isinstance(body, dict) or set(body) != {'job_id'}: raise ValueError('Invalid handoff status')
+                    key = identifier(body['job_id'])
+                    return self.send(200, (refresh if self.path.endswith('status') else retry)(service, key))
+                result = editorial_review(service, body)
                 return self.send(200, {"review": result, "publication_approved": False, "submitted": False})
             except (ValueError, KeyError):
                 return self.send(409, {"error": "Review rejected: changed version, invalid fields or conflicting request ID"})

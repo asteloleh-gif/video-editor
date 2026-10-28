@@ -34,6 +34,13 @@ def test_superseded_card_cannot_prepare_handoff(card):
     with pytest.raises(ValueError): prepare({**card, "state": "superseded"})
 
 
+def test_delivery_revision_is_independent_and_strict(card):
+    plan=prepare(card,delivery_revision=3)['input']
+    assert plan['revision']==3 and plan['assets'][0]['revision']=='2'
+    for invalid in [0,False,-1,'3']:
+        with pytest.raises(ValueError):prepare(card,delivery_revision=invalid)
+
+
 def test_exact_existing_hub_contract_accepts_adapter_output(card):
     contract = Path('/Users/oleh/Documents/Codex/2026-10-28/task/radar-acceptance/dist/hub/contract.js')
     if not contract.is_file(): pytest.skip('Existing Hub candidate checkout is not available')

@@ -4,9 +4,10 @@
   "openreel_pin": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
   "test_results": {
     "python": {
-      "passed": 77,
+      "passed": 110,
       "failed": 0,
-      "skipped": 0
+      "skipped": 0,
+      "scope": "workspace/canvas/hub/drive auth/voicebox/story/discovery/openreel"
     },
     "desktop_ipc": {
       "passed": 33,
@@ -34,8 +35,8 @@
     "project_survives_restart": true,
     "new_story_submitted_from_form": true,
     "new_story_completed_while_editor_closed": true,
-    "open_canvas_button_installed_and_clicked": false,
-    "remaining_native_check": "Mac locked before final button update; final signed bundle staged"
+    "open_canvas_button_installed_and_clicked": true,
+    "updated_bundle_installed_and_project_reopened": true
   },
   "artifacts": [
     {
@@ -91,20 +92,20 @@
       "media": 2
     },
     "external_openreel": "UNAVAILABLE: gateway SSE probe HTTP 429",
-    "hub_capabilities": "READ verified: copilot Instagram/Threads routes; no mutations"
+    "hub_capabilities": "READ verified this turn: copilot; 12 routes across 3 brands, Instagram/Threads and simulation/live. Integration permits only simulation Instagram."
   },
   "builds": {
     "installed": {
       "openreel_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
-      "patch_sha256": "d36f1317acc7ba177d74ba1fe832507cee22ec3d10809828744dedd71892c588",
+      "patch_sha256": "a33a4afe677e59e1bbf533af6b61bd5ecdfe5a437afe3872fafd6a8ebc2a7caa",
       "local_only": true
     },
     "final_staged": {
       "openreel_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
-      "patch_sha256": "5c4e6cecd6ed3ad97c2a20c1f67a66786cc808370477a404a5fbcfd7c0c27594",
+      "patch_sha256": "a33a4afe677e59e1bbf533af6b61bd5ecdfe5a437afe3872fafd6a8ebc2a7caa",
       "local_only": true
     },
-    "repository_patch_sha256": "5c4e6cecd6ed3ad97c2a20c1f67a66786cc808370477a404a5fbcfd7c0c27594"
+    "repository_patch_sha256": "a33a4afe677e59e1bbf533af6b61bd5ecdfe5a437afe3872fafd6a8ebc2a7caa"
   },
   "preserved": {
     "amazon_mp4_sha256": "b28298c8b14a8081851e8ea2e5d0bcce77abe3c2463b45e4c04ff06b904694ea",
@@ -113,12 +114,33 @@
     "main_merged": false
   },
   "not_done": [
-    "Cloud delivery of exact MP4 bytes to Hub",
+    "Owner completes existing Drive login",
+    "Exact MP4 Drive upload / remote hash / simulation DRAFT readback / Canvas video card acceptance",
+    "Separate owner consent and anonymous server media fetch verification",
     "Existing hosted Telegram BFF Canvas rollout",
-    "Real video plan submission / owner approval / scheduling / publishing",
+    "Owner publication approval / scheduling / publishing (not requested)",
     "100 full-video renders or Stage 2 Kevin certification"
   ],
   "publishing_changed": false,
   "hub_submitted": false,
-  "new_paid_services": false
+  "new_paid_services": false,
+  "hub_handoff": {
+    "implemented": true,
+    "installed": true,
+    "mode": "simulation_only",
+    "real_hub_reader_verified": true,
+    "existing_plans_read": 5,
+    "real_upload_verified": false,
+    "real_plan_submission_verified": false,
+    "blocker": "Existing drive-work OAuth refresh token expired; owner must complete Google login",
+    "job_id": "50236d32-9981-42f0-bbe6-053452068d44",
+    "state": "failed_before_upload",
+    "public_link_permission_changed": false,
+    "owner_approval_called": false,
+    "publishing_called": false,
+    "production_configuration_changed": false,
+    "drive_login_entry_button_verified": true,
+    "google_security_warning_handed_to_owner": true,
+    "oauth_completion_verified": false
+  }
 }

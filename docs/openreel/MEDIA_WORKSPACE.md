@@ -10,7 +10,7 @@
 2. Нажми «Получить файл» у доступного материала либо «Добавить свой файл…». Оригинал сохраняется отдельно; FFmpeg подготавливает монтажную копию. «Добавить в медиа проекта» переносит её в открытый проект.
 3. Отметь до 12 файлов. В «Новой истории» введи название и сценарий. Пустая строка разделяет сцены. Выбери прежний голос Олега RU/B или EN и нажми «Собрать новый черновик».
 4. Локальный Voicebox озвучит каждый абзац; реальные аудиосэмплы задают границы сцен. Локальный Whisper создаст черновые субтитры. Фиксированный Remotion-шаблон соберёт вертикальный H.264/AAC MP4. Выбранные материалы используются по порядку с повторением; смысловой подбор и автоматический фактчекинг здесь не выполняются.
-5. В «Для Canvas» можно просмотреть ролик, сохранить MP4, явно добавить его на таймлайн исходного проекта, экспортировать карточку JSON или начать новую версию сценария. Карточка содержит сценарий, источники, голос, субтитры, revision и SHA-256. Новая кнопка «Открыть Canvas на Mac» включена в feature patch; фактическая проверка установленной кнопки отмечается отдельно в validation JSON.
+5. В «Для Canvas» можно просмотреть ролик, сохранить MP4, явно добавить его на таймлайн исходного проекта, экспортировать карточку JSON или начать новую версию сценария. Карточка содержит сценарий, источники, голос, субтитры, revision и SHA-256. Новая кнопка «Открыть Canvas на Mac» включена в feature patch; фактическая кнопка проверена в установленном приложении.
 6. В «Темах» можно запустить до 100 тем. Это очередь поиска метаданных: она не скачивает и не публикует сотню видео автоматически. Дубликаты тем и source IDs убираются; завершённые темы не повторяются при восстановлении.
 
 Подготовка текста и выбор кадров остаются редакторскими действиями. Это рабочий первый универсальный шаблон, а не обещание художественного монтажа любой темы. Субтитры, произношение и соответствие кадров сценарию требуют просмотра.
@@ -25,8 +25,8 @@
 | Просмотр/сохранение/импорт в OpenReel | Native UI; подробные результаты в validation JSON |
 | Версии и карточка Canvas | Реализованы локально; устаревший parent/digest отклоняется |
 | Существующий Lazy Distribution Canvas | Локальная копия подключена к реальным черновикам: `http://127.0.0.1:17531/`. Видеоплеер, точная версия и замечание после restart проверены |
-| Hub adapter | Чистая подготовка `PlanInput`, только simulation; проверен против текущего JS-контракта существующего Hub |
-| Облачное MP4 preview / delivery | Не подключено; локальные пути и blob URL не выдаются за доступные серверному исполнителю |
+| Hub adapter | Установлена передача simulation DRAFT и чтение реальной очереди. Первый реальный handoff остановлен истёкшим Drive login до upload/submit; [точный статус](HUB_DELIVERY.md) |
+| Облачное MP4 preview / delivery | Реализована отдельная приватная Drive-копия и отдельное согласие на чтение по ссылке; живой upload/readback ещё требует входа Google |
 | Автоматическое согласование/публикация | Не включались; действующий Hub остаётся единственным исполнителем доставки |
 | Масштабирование | Durable metadata batches; один тяжёлый worker. 100 полнометражных сборок и 24/7 сервис не сертифицированы |
 
@@ -46,7 +46,8 @@ flowchart LR
   Timing --> Render[Fixed StoryShortV1 / Remotion]
   Render --> Review[MP4 + hash + revision card]
   Review --> Canvas[Existing Canvas / local preparation view]
-  Canvas -. pending verified cloud media delivery .-> Hub[Existing server Hub]
+  Canvas --> Handoff[Simulation handoff / explicit file access]
+  Handoff -. pending Drive login and live acceptance .-> Hub[Existing server Hub]
 ```
 
 Private home: `~/.local/share/astel-media-workspace/`. `catalogue.sqlite` хранит кандидатов, наблюдения, результаты поисков, assets, jobs и версии истории. `assets/<uuid>/` содержит неизменный оригинал, receipt, подготовленную копию и provenance. `jobs/<uuid>/` содержит props, narration, реальные ASR timestamps, sources, private log, MP4 и render receipt. Исходные записи голоса и bindings остаются в прежнем приватном Voicebox home.
@@ -59,9 +60,9 @@ Private home: `~/.local/share/astel-media-workspace/`. `catalogue.sqlite` хра
 
 Новый адаптер добавляет раздел **«Черновики с Mac»** в ту же навигацию Canvas. Источник данных — существующая SQLite-библиотека подготовки, а не отдельная очередь публикаций. Он показывает MP4 точной revision, сценарий, sources/license, hash и реальные jobs. «Вернуть на правку» сохраняет заметку к `story_id + digest`; «Принять черновик» — только редакторское решение. Оба действия возвращают `publication_approved=false, submitted=false`. Повтор UUID идемпотентен; конфликтующий payload или новая версия отклоняют устаревшее решение. Агент в UI тестировал только замечание к отдельному QA-ролику, не принимал материал за владельца.
 
-Служба `us.astel.media-workspace.canvas` — пользовательский LaunchAgent, слушает только `127.0.0.1:17531`. Owner-local session cookie — HttpOnly / SameSite=Strict, Host/Origin и cross-site requests проверяются; UI не получает Hub credentials. MP4 endpoint проверяет SHA-256 и поддерживает Range/seek. CSP закрывает iframe embedding; поля источников/сценария вставляются через textContent. Нет approve/schedule/publish/Hub proxy endpoints. Служба Canvas поднимается после пользовательского входа; это не boot recovery всех render jobs и не сервер в облаке.
+Служба `us.astel.media-workspace.canvas` — пользовательский LaunchAgent, слушает только `127.0.0.1:17531`. Owner-local session cookie — HttpOnly / SameSite=Strict, Host/Origin и cross-site requests проверяются; UI не получает Hub credentials. MP4 endpoint проверяет SHA-256 и поддерживает Range/seek. CSP закрывает iframe embedding; поля источников/сценария вставляются через textContent. Нет approve/schedule/publish endpoints. Новый фиксированный proxy читает inbox/status/metrics, а отдельное действие создаёт только simulation DRAFT; см. [HUB_DELIVERY.md](HUB_DELIVERY.md). Служба Canvas поднимается после пользовательского входа; это не boot recovery всех render jobs и не сервер в облаке.
 
-Целый исторический HTML, ZIP, скриншоты внутренних разделов, токены и голосовые исходники **не копируются в публичный GitHub**. В repo находятся только новый собственный adapter JS/CSS/Python и SHA-контрольные точки. Исходные storage keys/данные Canvas не переписываются; browser localStorage другого origin автоматически сюда не переносится. Старые разделы сохраняют исторический статус снимка. Раздел Hub в локальной копии явно подписан учебным; реальный Telegram BFF остаётся отдельным действующим подключением.
+Целый исторический HTML, ZIP, скриншоты внутренних разделов, токены и голосовые исходники **не копируются в публичный GitHub**. В repo находятся только новый собственный adapter JS/CSS/Python и SHA-контрольные точки. Исходные storage keys/данные Canvas не переписываются; browser localStorage другого origin автоматически сюда не переносится. Старые разделы сохраняют исторический статус снимка. Раздел «Очередь Hub» теперь читает настоящий Hub через private Mac reader. Исторические демо доступны только по явной кнопке «Вернуться к демо». Действующий Telegram BFF не менялся.
 
 Задания: `queued → running → ready | failed | cancelled`. UUID повторяет исходный запрос; конфликтующее содержимое с тем же UUID отвергается. Detached worker продолжает работу при закрытии OpenReel на бодрствующем Mac. При повторном открытии панель возобновляет незавершённые задания. Это не launchd-автозапуск после reboot и не продолжение с конкретного видеокадра. Завершённый render receipt позволяет повторно принять результат без новой озвучки; hash mismatch останавливает восстановление.
 
@@ -104,11 +105,13 @@ python3 scripts/install_openreel_voicebox_mac.py \
 
 ## Следующие MCP / tool configuration steps
 
-1. Локальный Canvas уже читает реальные файлы. Для server-facing версии применить прочитанный package к отдельной согласованной review-копии существующего Telegram BFF и пройти его owner auth. Исторический полный HTML не размещать в public/.
-2. Подключить проверенную доставку именно этих MP4 bytes: HTTPS origin allowlist, доступ сервера, hash/size/type, срок доступности и preview. Не помещать Hub token или private voice reference в HTML.
-3. Связать карточку `story root + revision + digest` с backend Hub plan. Правка ролика, текста, аккаунта или времени требует новой согласуемой версии. Script review и publication approval остаются разными решениями.
-4. Проверить через существующий Hub preview → simulation draft → readback в настоящем Canvas → отказ stale revision. Согласование и live scheduling принадлежат пользователю и Hub; в этом инкременте их не вызывали.
-5. После native UI acceptance добавить ограниченные workspace MCP tools `list/search/acquire/story/status/cancel/card`; существующий Desktop MCP не получает их автоматически от добавления IPC.
-6. До масштабных рендеров добавить архив/retention jobs, bounded backlog, boot recovery и отдельную сертификацию Stage 2 Kevin. Не запускать 100 полных историй на Mac с текущим свободным диском.
+Обновление handoff: [HUB_DELIVERY.md](HUB_DELIVERY.md). Mac reader уже подключён к настоящему Hub; ниже исходные требования cloud rollout, их нельзя считать завершёнными по одному локальному превью.
+
+1. Завершить прежний Google Drive login и продолжить существующий handoff. Проверить реальные MP4 hash/size, simulation DRAFT readback и ту же карточку в реальной очереди; сейчас этот acceptance заблокирован входом.
+2. Получить отдельное согласие владельца на чтение только финальной копии и проверить анонимную серверную загрузку точных bytes. Локальное превью по SHA и разрешение Drive сами по себе не подтверждают download сервером Hub.
+3. Для размещённой Canvas-версии применить прочитанный package к отдельной согласованной review-копии существующего Telegram BFF и пройти его owner auth. Исторический полный HTML не размещать в public/. Согласование и live scheduling принадлежат владельцу/Hub; интеграция их не вызывает.
+4. После native UI acceptance добавить ограниченные workspace MCP tools `list/search/acquire/story/status/cancel/card`; существующий Desktop MCP не получает их автоматически от добавления IPC.
+5. До масштабных рендеров добавить архив/retention jobs, bounded backlog и boot recovery. Не запускать 100 полных историй на Mac с текущим свободным диском.
+6. Отдельно сертифицировать Stage 2 Kevin. Mac остаётся самостоятельной Stage 1.
 
 Полностью закрытый cloud loop сейчас не заявляется: недостающие реальные подключения перечислены выше. Локальный путь материал → новый сценарий → голос → MP4 уже выполнен; существующая production publishing конфигурация не изменялась.

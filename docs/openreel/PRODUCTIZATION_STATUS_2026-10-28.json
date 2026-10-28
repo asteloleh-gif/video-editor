@@ -86,7 +86,15 @@
   "pilot_quality_work": "remains paused; checkpoint and media unchanged",
   "publishing_changed": false,
   "assembly_validation": "STORY_ASSEMBLY_VALIDATION_2026-10-28.json",
-  "latest_increment": "MEDIA_WORKSPACE.md",
+  "latest_increment": "HUB_DELIVERY.md",
   "latest_validation": "MEDIA_WORKSPACE_VALIDATION_2026-10-28.json",
-  "prior_sections_are_snapshot_before_workspace": true
+  "prior_sections_are_snapshot_before_workspace": true,
+  "latest_handoff_status": {
+    "installed": true,
+    "real_queue_reader_verified": true,
+    "upload_submit_verified": false,
+    "blocker": "Owner Drive reauthorization required",
+    "mode": "simulation_only",
+    "publishing_changed": false
+  }
 }

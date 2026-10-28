@@ -27,10 +27,10 @@ def review_card(service, story_id):
             "sources": [{k: s[k] for k in ("id", "title", "asset_id", "asset_sha256", "sourceUrl", "author", "license")} for s in data["scenes"]],
             "artifact": {"sha256": data["artifact_sha256"], "bytes": data["artifact_bytes"], "duration": data["duration"], "mime": "video/mp4"},
             "preview": {"state": "local_only", "message": "Remote preview requires a verified media delivery URL"},
-            "publication": {"state": "not_submitted", "approved": False}}
+            "publication": {"state": "not_approved", "approved": False, "handoff_status": "see_canvas_handoffs"}}
 
 
-def prepare_hub_input(card, *, expected_digest, account_key, text, media_url, available_until, scheduled_at, allowed_hosts):
+def prepare_hub_input(card, *, expected_digest, account_key, text, media_url, available_until, scheduled_at, allowed_hosts, delivery_revision=None):
     if card["digest"] != expected_digest or card["state"] != "needs_review":
         raise ValueError("Review revision is stale")
     if account_key not in {f"{brand}:instagram" for brand in ("astel.us", "astel.u", "leoakastel")}:
@@ -55,10 +55,12 @@ def prepare_hub_input(card, *, expected_digest, account_key, text, media_url, av
     if date(available_until) <= date(scheduled_at) or date(scheduled_at) <= datetime.now(timezone.utc):
         raise ValueError("Delivery must remain available after the scheduled time")
     brand = account_key.split(":", 1)[0]
-    identity = f"astel-video:{card['id']}:{card['revision']}:{card['artifact']['sha256']}"
+    revision = card["revision"] if delivery_revision is None else delivery_revision
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 1: raise ValueError("Invalid delivery revision")
+    identity = f"astel-video:{card['id']}:simulation:{revision}"
     # Simulation is an explicit rehearsal. The existing owner approval and
     # publisher remain responsible for any subsequent live plan.
-    plan = {"contractVersion": 1, "projectId": "copilot", "brandId": brand, "contentId": f"astel-video:{card['id']}", "revision": card["revision"],
+    plan = {"contractVersion": 1, "projectId": "copilot", "brandId": brand, "contentId": f"astel-video:{card['id']}:simulation", "revision": revision,
             "source": {"producer": "astel-video-workspace", "reference": card["id"]},
             "variants": {"reel": {"text": text, "asset": 0, "instagram": {"type": "reel"}}},
             "assets": [{"url": media_url, "kind": "reel", "digest": "sha256:" + card["artifact"]["sha256"], "revision": str(card["revision"]), "availableUntil": available_until}],
