@@ -1,0 +1,66 @@
+{
+  "verified_at": "2026-10-28T23:06:40.860584+00:00",
+  "scope": "One completed MP4 to simulation DRAFT; no publication",
+  "job_id": "50236d32-9981-42f0-bbe6-053452068d44",
+  "story_id": "4448432b-a128-4602-9bce-60f015a3c815",
+  "story_digest": "cb29e3a0e39f843b1890532a8131f14f566e72602b950129769f3dac7ab5606f",
+  "artifact_sha256": "bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123",
+  "artifact_bytes": 25369940,
+  "duration": 41.024,
+  "drive_upload_and_remote_sha256_verified": true,
+  "drive_file_reference": "Private receipt on Mac; no unlisted file URL committed",
+  "owner_completed_google_login": true,
+  "owner_authorized_link_reading_for_this_exact_output": true,
+  "permission_applied_through_canvas": true,
+  "output_permission": {
+    "type": "anyone",
+    "role": "reader",
+    "allowFileDiscovery": false
+  },
+  "parent_folder_stays_private": true,
+  "anonymous_preflight": {
+    "head": {
+      "status": 200,
+      "mime": "video/mp4",
+      "bytes": "25369940"
+    },
+    "download": {
+      "status": 200,
+      "bytes": 25369940,
+      "sha256": "bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123",
+      "authenticated": false
+    },
+    "parent_folder_stays_private": true
+  },
+  "existing_hub_media_probe_passed_on_mac": true,
+  "deployed_hub_media_probe_execution_verified": false,
+  "hub": {
+    "id": "b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa",
+    "digest": "d6a6aa340254f026ae0a5aae58d020a6bcd765a6d8da3e635e4fc11ebe081bab",
+    "state": "DRAFT",
+    "mode": "simulation",
+    "approval": null,
+    "attempts": [
+      0
+    ],
+    "receipts": [
+      null
+    ]
+  },
+  "independent_hub_mcp_read_verified": true,
+  "canvas_real_queue_card_verified": true,
+  "canvas_video": {
+    "duration": 41.024,
+    "width": 1080,
+    "height": 1920,
+    "ready_state": 4,
+    "error": null,
+    "source": "Exact local MP4 matched by SHA; not proof of a Hub worker download",
+    "played_to": 18.593159,
+    "paused_after_test": true
+  },
+  "same_request_repeat": "Same ready job and plan ID; exactly one handoff binding",
+  "publishing_called": false,
+  "production_configuration_changed": false,
+  "new_paid_service": false
+}

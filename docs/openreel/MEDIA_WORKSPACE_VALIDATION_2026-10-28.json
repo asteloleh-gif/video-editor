@@ -114,15 +114,13 @@
     "main_merged": false
   },
   "not_done": [
-    "Owner completes existing Drive login",
-    "Exact MP4 Drive upload / remote hash / simulation DRAFT readback / Canvas video card acceptance",
-    "Separate owner consent and anonymous server media fetch verification",
+    "Deployed Hub worker media fetch/preflight before any real delivery",
     "Existing hosted Telegram BFF Canvas rollout",
     "Owner publication approval / scheduling / publishing (not requested)",
     "100 full-video renders or Stage 2 Kevin certification"
   ],
   "publishing_changed": false,
-  "hub_submitted": false,
+  "hub_submitted": true,
   "new_paid_services": false,
   "hub_handoff": {
     "implemented": true,
@@ -130,17 +128,25 @@
     "mode": "simulation_only",
     "real_hub_reader_verified": true,
     "existing_plans_read": 5,
-    "real_upload_verified": false,
-    "real_plan_submission_verified": false,
-    "blocker": "Existing drive-work OAuth refresh token expired; owner must complete Google login",
+    "real_upload_verified": true,
+    "real_plan_submission_verified": true,
+    "blocker": null,
     "job_id": "50236d32-9981-42f0-bbe6-053452068d44",
-    "state": "failed_before_upload",
-    "public_link_permission_changed": false,
+    "state": "received",
+    "public_link_permission_changed": true,
     "owner_approval_called": false,
     "publishing_called": false,
     "production_configuration_changed": false,
     "drive_login_entry_button_verified": true,
     "google_security_warning_handed_to_owner": true,
-    "oauth_completion_verified": false
+    "oauth_completion_verified": true,
+    "owner_authorized_exact_file_link_reading": true,
+    "plan_id": "b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa",
+    "input_digest": "d6a6aa340254f026ae0a5aae58d020a6bcd765a6d8da3e635e4fc11ebe081bab",
+    "media_ready": true,
+    "anonymous_head_and_full_hash_verified": true,
+    "deployed_hub_media_probe_execution_verified": false,
+    "canvas_queue_card_and_video_verified": true,
+    "validation": "HUB_HANDOFF_VALIDATION_2026-10-28.json"
   }
 }

@@ -92,9 +92,12 @@
   "latest_handoff_status": {
     "installed": true,
     "real_queue_reader_verified": true,
-    "upload_submit_verified": false,
-    "blocker": "Owner Drive reauthorization required",
+    "upload_submit_verified": true,
+    "blocker": null,
     "mode": "simulation_only",
-    "publishing_changed": false
+    "publishing_changed": false,
+    "anonymous_download_hash_verified": true,
+    "canvas_queue_card_verified": true,
+    "validation": "HUB_HANDOFF_VALIDATION_2026-10-28.json"
   }
 }

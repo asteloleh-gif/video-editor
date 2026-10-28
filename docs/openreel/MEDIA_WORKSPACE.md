@@ -25,8 +25,8 @@
 | Просмотр/сохранение/импорт в OpenReel | Native UI; подробные результаты в validation JSON |
 | Версии и карточка Canvas | Реализованы локально; устаревший parent/digest отклоняется |
 | Существующий Lazy Distribution Canvas | Локальная копия подключена к реальным черновикам: `http://127.0.0.1:17531/`. Видеоплеер, точная версия и замечание после restart проверены |
-| Hub adapter | Установлена передача simulation DRAFT и чтение реальной очереди. Первый реальный handoff остановлен истёкшим Drive login до upload/submit; [точный статус](HUB_DELIVERY.md) |
-| Облачное MP4 preview / delivery | Реализована отдельная приватная Drive-копия и отдельное согласие на чтение по ссылке; живой upload/readback ещё требует входа Google |
+| Hub adapter | Установлена передача simulation DRAFT и чтение реальной очереди. Реальный MP4 принят как DRAFT, независимый status и карточка в Canvas проверены; [точный статус](HUB_DELIVERY.md) |
+| Облачное MP4 preview / delivery | Реализована отдельная приватная Drive-копия и отдельное согласие на чтение по ссылке; живой upload/readback, анонимный полный download/hash и точная карточка в Canvas проверены |
 | Автоматическое согласование/публикация | Не включались; действующий Hub остаётся единственным исполнителем доставки |
 | Масштабирование | Durable metadata batches; один тяжёлый worker. 100 полнометражных сборок и 24/7 сервис не сертифицированы |
 
@@ -47,7 +47,7 @@ flowchart LR
   Render --> Review[MP4 + hash + revision card]
   Review --> Canvas[Existing Canvas / local preparation view]
   Canvas --> Handoff[Simulation handoff / explicit file access]
-  Handoff -. pending Drive login and live acceptance .-> Hub[Existing server Hub]
+  Handoff --> Hub[Existing server Hub / verified DRAFT]
 ```
 
 Private home: `~/.local/share/astel-media-workspace/`. `catalogue.sqlite` хранит кандидатов, наблюдения, результаты поисков, assets, jobs и версии истории. `assets/<uuid>/` содержит неизменный оригинал, receipt, подготовленную копию и provenance. `jobs/<uuid>/` содержит props, narration, реальные ASR timestamps, sources, private log, MP4 и render receipt. Исходные записи голоса и bindings остаются в прежнем приватном Voicebox home.
@@ -107,8 +107,8 @@ python3 scripts/install_openreel_voicebox_mac.py \
 
 Обновление handoff: [HUB_DELIVERY.md](HUB_DELIVERY.md). Mac reader уже подключён к настоящему Hub; ниже исходные требования cloud rollout, их нельзя считать завершёнными по одному локальному превью.
 
-1. Завершить прежний Google Drive login и продолжить существующий handoff. Проверить реальные MP4 hash/size, simulation DRAFT readback и ту же карточку в реальной очереди; сейчас этот acceptance заблокирован входом.
-2. Получить отдельное согласие владельца на чтение только финальной копии и проверить анонимную серверную загрузку точных bytes. Локальное превью по SHA и разрешение Drive сами по себе не подтверждают download сервером Hub.
+1. Выполнено: прежний Drive login восстановлен, исходное задание завершено. MP4 hash/size, simulation DRAFT, независимый Hub status и та же карточка в реальной очереди проверены.
+2. Выполнено: отдельное согласие на чтение финальной копии, анонимные HEAD/GET и полный SHA-256. До реальной доставки остаётся deployed Hub media preflight; сетевой тест на Mac не выдаётся за запуск его worker.
 3. Для размещённой Canvas-версии применить прочитанный package к отдельной согласованной review-копии существующего Telegram BFF и пройти его owner auth. Исторический полный HTML не размещать в public/. Согласование и live scheduling принадлежат владельцу/Hub; интеграция их не вызывает.
 4. После native UI acceptance добавить ограниченные workspace MCP tools `list/search/acquire/story/status/cancel/card`; существующий Desktop MCP не получает их автоматически от добавления IPC.
 5. До масштабных рендеров добавить архив/retention jobs, bounded backlog и boot recovery. Не запускать 100 полных историй на Mac с текущим свободным диском.
