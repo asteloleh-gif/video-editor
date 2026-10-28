@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-28",
+  "branch": "integration/astel-media-canvas-stack",
+  "openreel_pin": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "test_results": {
+    "python": {
+      "passed": 77,
+      "failed": 0,
+      "skipped": 0
+    },
+    "desktop_ipc": {
+      "passed": 33,
+      "failed": 0
+    },
+    "timeline": {
+      "passed": 11,
+      "failed": 0
+    },
+    "web_typecheck": 0,
+    "desktop_typecheck": 0,
+    "remotion_typecheck": 0,
+    "web_build": 0,
+    "desktop_build": 0,
+    "patch_apply_clean_pin": 0,
+    "patch_reverse_build_source": 0
+  },
+  "native_ui": {
+    "catalogue_and_search": true,
+    "acquired_asset_import": true,
+    "mp4_timeline_import": true,
+    "undo_redo": true,
+    "native_mp4_save_and_hash": true,
+    "card_export": true,
+    "project_survives_restart": true,
+    "new_story_submitted_from_form": true,
+    "new_story_completed_while_editor_closed": true,
+    "open_canvas_button_installed_and_clicked": false,
+    "remaining_native_check": "Mac locked before final button update; final signed bundle staged"
+  },
+  "artifacts": [
+    {
+      "id": "4448432b-a128-4602-9bce-60f015a3c815",
+      "revision": 1,
+      "digest": "cb29e3a0e39f843b1890532a8131f14f566e72602b950129769f3dac7ab5606f",
+      "duration": 41.024,
+      "artifact_sha256": "bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123",
+      "artifact_bytes": 25369940
+    },
+    {
+      "id": "de48428b-9953-4b54-bb55-69245145a5a9",
+      "revision": 1,
+      "digest": "82cc9bd9b734877a40a0c8e6f542ff946a73a000780ea57d4bb7b29e49024c67",
+      "duration": 12.010667,
+      "artifact_sha256": "6516b5b6569f12dc98d75e79fc17a7cd0f5664797aea4d486968081b288a0d2a",
+      "artifact_bytes": 3965188
+    }
+  ],
+  "canvas": {
+    "url": "http://127.0.0.1:17531/",
+    "private_launchagent": "us.astel.media-workspace.canvas",
+    "source_html_sha256": "89c0152e696fed0e836029d5c64fe5d63b0afa85e7bf7ac93751a64a53d20ada",
+    "source_zip_sha256": "cca3c19768f91571d628f304c46983af41e69383a040fd15233b351d4dd6d018",
+    "original_html_modified": false,
+    "original_zip_modified": false,
+    "full_snapshot_committed_or_publicly_hosted": false,
+    "real_stories_shown": 2,
+    "browser_mp4_qa": {
+      "duration": 12.010667,
+      "width": 1080,
+      "height": 1920,
+      "ready_state": 4,
+      "error": null
+    },
+    "browser_mp4_main": {
+      "duration": 41.024,
+      "width": 1080,
+      "height": 1920,
+      "played_to": 11.171099,
+      "error": null
+    },
+    "editorial_qa_note_saved_and_restored_after_service_restart": true,
+    "owner_acceptance_called_by_agent": false,
+    "publication_endpoints_present": false
+  },
+  "mcp": {
+    "local_desktop_read": {
+      "tool_count": 311,
+      "project_id": "68b6d03d-3a15-42b8-9a19-5cb1c118e691",
+      "duration": 41.024,
+      "clips": 1,
+      "media": 2
+    },
+    "external_openreel": "UNAVAILABLE: gateway SSE probe HTTP 429",
+    "hub_capabilities": "READ verified: copilot Instagram/Threads routes; no mutations"
+  },
+  "builds": {
+    "installed": {
+      "openreel_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+      "patch_sha256": "d36f1317acc7ba177d74ba1fe832507cee22ec3d10809828744dedd71892c588",
+      "local_only": true
+    },
+    "final_staged": {
+      "openreel_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+      "patch_sha256": "5c4e6cecd6ed3ad97c2a20c1f67a66786cc808370477a404a5fbcfd7c0c27594",
+      "local_only": true
+    },
+    "repository_patch_sha256": "5c4e6cecd6ed3ad97c2a20c1f67a66786cc808370477a404a5fbcfd7c0c27594"
+  },
+  "preserved": {
+    "amazon_mp4_sha256": "b28298c8b14a8081851e8ea2e5d0bcce77abe3c2463b45e4c04ff06b904694ea",
+    "amazon_snapshot_zip_sha256": "96db643ccb7b9d8085b55a6bfae04c8cb3115626a1ec89a1db177b5fa65b7d06",
+    "original_openreel_present": true,
+    "main_merged": false
+  },
+  "not_done": [
+    "Cloud delivery of exact MP4 bytes to Hub",
+    "Existing hosted Telegram BFF Canvas rollout",
+    "Real video plan submission / owner approval / scheduling / publishing",
+    "100 full-video renders or Stage 2 Kevin certification"
+  ],
+  "publishing_changed": false,
+  "hub_submitted": false,
+  "new_paid_services": false
+}

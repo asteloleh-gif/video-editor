@@ -1,12 +1,16 @@
 # Battle Box AutoEditor
 
+## Astel materials and new stories
+
+The Mac candidate now includes **AI Generate → Материалы и истории**: a durable local library, Commons acquisition, topic batches, a pasted script → existing Voicebox → real ASR timing → generic Remotion MP4 workflow, and versioned review-card export. The owner's existing Canvas now has a private Mac preparation view with real videos and persistent editorial remarks. See [setup, architecture and the remaining cloud delivery/Hub gates](docs/openreel/MEDIA_WORKSPACE.md). Reviewing or exporting a card does not submit or approve publishing.
+
 ## Voicebox local voice pilot
 
 The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox Qwen MLX API runtime and an Astel reference/manifest adapter. See [Voicebox setup and next steps](docs/voicebox/README.md) and [source audit](docs/voicebox/RESEARCH.md). The separate OpenReel Astel app now includes a local speech panel; see [text-to-speech setup and validation](docs/voicebox/OPENREEL_LOCAL_SPEECH.md). Publishing remains separate.
 
 ## Local video search in OpenReel Astel
 
-The Mac candidate also offers **AI Generate → Сборка ролика** for the frozen Amazon v2 package: local durable rendering, progress/cancel, MP4 preview/save and explicit timeline import. See [assembly workflow, architecture and setup](docs/openreel/STORY_ASSEMBLY.md). Preparing a new topic remains a separate step.
+The Mac candidate also offers **AI Generate → Сборка ролика** for the frozen Amazon v2 package: local durable rendering, progress/cancel, MP4 preview/save and explicit timeline import. See [assembly workflow, architecture and setup](docs/openreel/STORY_ASSEMBLY.md). The new generic story panel above handles separate scripts without changing that frozen package.
 
 The installed candidate includes **AI Generate → Найти видео**: YouTube topic search, thumbnails, duration filters, saved selections and TXT link export, with no paid search API. See [how to use and install](docs/openreel/VIDEO_SEARCH.md). Voicebox remains available beside it; this search feature does not download or publish videos.
 
@@ -16,7 +20,7 @@ A local Amazon story pilot now exercises reviewed source acquisition, the existi
 
 ## OpenReel integration candidate — Mac first
 
-Current verification and implementation order: [project audit and roadmap, 28 October 2026](docs/openreel/PROJECT_AUDIT_AND_ROADMAP_2026-10-28.md). The next product increment is a persistent source library and selected-file acquisition/import, followed by a generic new-story package.
+Original audit and implementation order: [project audit and roadmap, 28 October 2026](docs/openreel/PROJECT_AUDIT_AND_ROADMAP_2026-10-28.md). The [media workspace implementation](docs/openreel/MEDIA_WORKSPACE.md) advances the local library and new-story path; the real Canvas/media-delivery bridge remains a separate open acceptance gate.
 
 The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.
 

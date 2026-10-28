@@ -24,6 +24,7 @@ PIN = "c9340465e5d37e684cc25bdbe746c4ccd45e165c"
 PATCH = REPO / "integration/voicebox/patches/0002-openreel-local-speech.patch"
 SEARCH_PATCH = REPO / "integration/video-search/0001-openreel-voicebox-and-search.patch"
 STORY_PATCH = REPO / "integration/story-render/0001-openreel-astel-assembly.patch"
+WORKSPACE_PATCH = REPO / "integration/media-workspace/0001-openreel-astel-workspace.patch"
 
 
 def run(args, **kwargs):
@@ -138,6 +139,7 @@ def main():
     parser.add_argument("--bridge-only", action="store_true")
     parser.add_argument("--with-video-search", action="store_true", help="Include the free local YouTube search panel")
     parser.add_argument("--with-story-render", action="store_true", help="Include Voicebox, search and durable prepared-package assembly")
+    parser.add_argument("--with-media-workspace", action="store_true", help="Include persistent media library, topic batches and new-story assembly")
     parser.add_argument("--built-source", type=Path, help="Use an already built and reviewed patched clone")
     parser.add_argument("--node", default=shutil.which("node"))
     parser.add_argument("--pnpm", default=shutil.which("pnpm"))
@@ -155,11 +157,13 @@ def main():
         parser.error("Node 22 or newer is required")
     if not args.built_source and not args.pnpm:
         parser.error("Supply --pnpm to build the pinned candidate")
-    patch = STORY_PATCH if args.with_story_render else SEARCH_PATCH if args.with_video_search else PATCH
-    if args.with_video_search or args.with_story_render:
+    patch = WORKSPACE_PATCH if args.with_media_workspace else STORY_PATCH if args.with_story_render else SEARCH_PATCH if args.with_video_search else PATCH
+    if args.with_video_search or args.with_story_render or args.with_media_workspace:
         run([sys.executable, REPO / "scripts/setup_video_search_mac.py"])
-    if args.with_story_render:
+    if args.with_story_render or (args.with_media_workspace and not (Path.home() / ".local/share/astel-story-render/runtime/node_modules").exists()):
         run([sys.executable, REPO / "scripts/setup_story_render_mac.py", "--node", args.node])
+    if args.with_media_workspace:
+        run([sys.executable, REPO / "scripts/setup_media_workspace_mac.py", "--node", args.node])
     source = args.built_source.resolve() if args.built_source else build_source(args.node, args.pnpm, patch)
     app = package(source, args.node, patch)
     print(json.dumps({"app": str(app), "bridge": str(root), "original_preserved": "/Applications/OpenReel.app"}, ensure_ascii=False, indent=2))
