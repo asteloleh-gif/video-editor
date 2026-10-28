@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "id": "amazon-pilot-20261028",
+  "topic": "От книжного магазина к инфраструктуре: история Amazon",
+  "language": "ru",
+  "voice_profile": "oleh-ru",
+  "facts": [
+    {"claim": "Компания основана в 1994; интернет-магазин открылся в июле 1995", "url": "https://ir.aboutamazon.com/faqs/default.aspx"},
+    {"claim": "Amazon начал с продажи книг через интернет", "url": "https://press.aboutamazon.com/1999/6/from-zero-to-10-million-in-less-than-four-years-amazon-com-to-pass-e-commerce-milestone-today"},
+    {"claim": "Amazon S3 запущен 14 марта 2006; сервис хранения данных для разработчиков", "url": "https://aws.amazon.com/blogs/aws/eight-years-and-counting-of-cloud-computing/"}
+  ],
+  "assets": [
+    {"id": "warehouse-1", "raw": "warehouse-1.webm", "kind": "video", "source": "https://commons.wikimedia.org/wiki/File:Amazon_warehouse_BHX4_loading_docks_1.webm", "title": "Amazon warehouse BHX4 loading docks 1.webm", "author": "domdomegg", "license": "CC-BY-4.0", "license_url": "https://creativecommons.org/licenses/by/4.0/", "year": 2019, "sha256": "ca784d69572bc5a7d5e3746d3922bff5cb875c77b35d309d9835d54dc3e5b5f5", "reason": "Реальная работа Amazon BHX4: конвейеры и обработка заказов; используется в сцене логистики, а не как архив 1995 года", "changes": "Без исходного звука; обрезка по времени, кадрирование и графические слои"},
+    {"id": "warehouse-2", "raw": "warehouse-2.webm", "kind": "video", "source": "https://commons.wikimedia.org/wiki/File:Amazon_warehouse_BHX4_loading_docks_2.webm", "title": "Amazon warehouse BHX4 loading docks 2.webm", "author": "domdomegg", "license": "CC-BY-4.0", "license_url": "https://creativecommons.org/licenses/by/4.0/", "year": 2019, "sha256": "748729b76df00945664e01a1cb056eaf9235118bab6abbd479f3996a5969c62d", "reason": "Второй план того же подтверждённого объекта для смены ракурса", "changes": "Без исходного звука; обрезка по времени, кадрирование и графические слои"},
+    {"id": "bezos", "raw": "bezos-2004.jpg", "kind": "image", "source": "https://commons.wikimedia.org/wiki/File:Jeff_Bezos_(153327601).jpg", "title": "Jeff Bezos (153327601).jpg", "author": "JD Lasica", "license": "CC-BY-2.0", "license_url": "https://creativecommons.org/licenses/by/2.0/", "year": 2004, "sha256": "6708cd3d1e0259d9d898526464aa574410883b49806bbbcc44cc642b3d2047dc", "reason": "Проверенный портрет основателя; год фотографии явно подписан", "changes": "Кадрирование, масштабирование, тональная подложка"},
+    {"id": "warehouse-photo", "raw": "warehouse-photo.jpg", "kind": "image", "source": "https://commons.wikimedia.org/wiki/File:Amazon_Fulfillment_Center_MSP1_(48609899896).jpg", "title": "Amazon Fulfillment Center MSP1 (48609899896).jpg", "author": "Tony Webster", "license": "CC-BY-2.0", "license_url": "https://creativecommons.org/licenses/by/2.0/", "year": 2019, "sha256": "32693d3dbee7e6475b99c7adaf38d23fae2f396d4c8dbdbafdfe80faff8ed879", "reason": "Реальный объект Amazon MSP1 для вступления и финала", "changes": "Уменьшение, кадрирование и движение камеры"}
+  ],
+  "scenes": [
+    {"id": "hook", "title": "Всё началось\nс книг", "eyebrow": "AMAZON / ИСТОРИЯ КОМПАНИИ", "kind": "photo", "asset": "warehouse-photo", "anchor": []},
+    {"id": "origin", "title": "1994 → 1995", "eyebrow": "КОМПАНИЯ → ИНТЕРНЕТ-МАГАЗИН", "kind": "founder", "asset": "bezos", "anchor": ["1994", "четвертом", "джефф безос"]},
+    {"id": "books", "title": "Каталог\nбез границ полки", "eyebrow": "ПОЧЕМУ КНИГИ?", "kind": "books", "anchor": ["почему книги"]},
+    {"id": "delivery", "title": "За кнопкой\n«купить»", "eyebrow": "СКЛАДЫ / УПАКОВКА / ДОСТАВКА", "kind": "video", "asset": "warehouse-1", "trim_start": 2, "anchor": ["дальше amazon", "дальше амазон", "расширял ассортимент"]},
+    {"id": "cloud", "title": "2006 / Amazon S3", "eyebrow": "СЛЕДУЮЩИЙ ПОВОРОТ", "kind": "cloud", "anchor": ["но компания пошла", "компания пошла еще дальше"]},
+    {"id": "lesson", "title": "От товара\nк системе", "eyebrow": "ЧТО ОБЪЕДИНЯЕТ ЭТУ ИСТОРИЮ", "kind": "video", "asset": "warehouse-2", "trim_start": 4, "anchor": ["получается"]},
+    {"id": "close", "title": "Смотри шире\nпервого продукта", "eyebrow": "ИСТОРИИ КОМПАНИЙ / ASTEL", "kind": "photo", "asset": "warehouse-photo", "anchor": ["вот почему"]}
+  ]
+}

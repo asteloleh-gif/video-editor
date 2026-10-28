@@ -8,6 +8,10 @@ The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox 
 
 The installed candidate includes **AI Generate → Найти видео**: YouTube topic search, thumbnails, duration filters, saved selections and TXT link export, with no paid search API. See [how to use and install](docs/openreel/VIDEO_SEARCH.md). Voicebox remains available beside it; this search feature does not download or publish videos.
 
+## Topic-to-video pilot
+
+A local Amazon story pilot now exercises reviewed source acquisition, the existing personal Voicebox profile, local ASR scene timing/caption review and a deterministic Remotion render. See [pilot evidence and replay instructions](docs/story-pilot/README.md). The completed MP4 is imported into a separate OpenReel review project; the automated Hub round trip remains a next step.
+
 ## OpenReel integration candidate — Mac first
 
 The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.

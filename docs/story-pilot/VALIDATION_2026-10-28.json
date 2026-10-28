@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-28",
+  "mode": "local_review_only",
+  "topic": "Amazon",
+  "duration_seconds": 62.314667,
+  "file_bytes": 23704205,
+  "sha256": "85d872aee8e3b28fdd8303be87b384c46ed53b178910125f427fdbfbe1e68480",
+  "video": {
+    "codec": "h264",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "audio": {
+    "codec": "aac",
+    "sample_rate": 48000,
+    "mean_volume_db": -21.8,
+    "max_volume_db": -4.5,
+    "narration_seconds": 59.243125,
+    "profile": "oleh-ru",
+    "speed": 1.0,
+    "warm": true,
+    "export_loudness": {
+      "method": "FFmpeg ebur128=peak=true on final MP4",
+      "integrated_lufs": -19.1,
+      "loudness_range_lu": 4.4,
+      "true_peak_dbtp": -4.5
+    }
+  },
+  "source_discovery": {
+    "queries": 2,
+    "youtube_candidates": 20,
+    "selection": "agent reviewed; semantic ranking not automated",
+    "downloaded_source_videos": 2,
+    "downloaded_source_images": 2,
+    "license_review": "CC BY 2.0 / 4.0 declarations verified; attribution in credits and SOURCES.md",
+    "fresh_acquire_download_verified": true,
+    "raw_hashes_verified": true
+  },
+  "timeline": {
+    "scenes": 7,
+    "caption_cues": 25,
+    "timing": "local whisper.cpp real ASR anchors",
+    "caption_text": "corrected against narration script; bound to audio SHA-256",
+    "word_level_alignment": false
+  },
+  "checks": {
+    "full_ffmpeg_decode": "passed, zero errors",
+    "ffprobe_av_streams": "passed",
+    "visual_review": "8 sampled frames including credits; no clipped headlines",
+    "python_tests": 4,
+    "remotion_typecheck": "passed",
+    "studio_preview": "loaded AstelStoryPilot with scene rows",
+    "native_openreel": {
+      "project": {
+        "id": "f8cd73af-d4c6-4ef6-94c7-5eb282082e49",
+        "name": "Amazon - pilot 01",
+        "settings": {
+          "width": 1080,
+          "height": 1920,
+          "fps": 30
+        }
+      },
+      "durationSec": 62.31466666666667,
+      "trackCount": 1,
+      "clipCount": 1,
+      "mediaCount": 1,
+      "overlayCount": 0
+    },
+    "native_openreel_playback": "advanced to end; unmuted; visible frame verified at 2.29 seconds",
+    "new_project_only": true
+  },
+  "scope": {
+    "render_engine": "Remotion 4.0.529",
+    "editor_handoff": "finished MP4 on one OpenReel video track",
+    "automatic_source_selection": false,
+    "hub_submission": false,
+    "publishing": false,
+    "paid_api_calls": false
+  },
+  "owner_review": {
+    "accepted_as": "test pilot",
+    "requested_improvements": [
+      "voice",
+      "editing"
+    ],
+    "approved_for_publishing": false
+  }
+}

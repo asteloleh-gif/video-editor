@@ -1,0 +1,226 @@
+{
+  "date": "2026-10-28",
+  "artifact_sha256": "85d872aee8e3b28fdd8303be87b384c46ed53b178910125f427fdbfbe1e68480",
+  "artifact_preserved": true,
+  "owner_feedback": {
+    "accepted_as": "test pilot",
+    "requested_improvements": [
+      "voice",
+      "editing"
+    ],
+    "approved_for_publishing": false
+  },
+  "evidence_boundary": {
+    "technical_measurements": "verified on exported MP4 and narration",
+    "visual_structure": "verified from composition, props and sampled frames",
+    "voice_identity": "owner confirmed earlier; no independent blind comparison",
+    "prosody_and_pronunciation": "editorial hypotheses for listening comparison; ASR mistakes alone are not evidence of mispronunciation",
+    "new_models_installed_for_audit": false
+  },
+  "measurements": {
+    "spoken_words": 131,
+    "words_per_minute": 132.7,
+    "pauses_over_150ms": 15,
+    "pause_total_seconds": 3.45,
+    "longest_pause_seconds": 0.47,
+    "scenes": [
+      {
+        "id": "hook",
+        "seconds": 6.0,
+        "kind": "photo"
+      },
+      {
+        "id": "origin",
+        "seconds": 9.0,
+        "kind": "founder"
+      },
+      {
+        "id": "books",
+        "seconds": 7.0,
+        "kind": "books"
+      },
+      {
+        "id": "delivery",
+        "seconds": 10.0,
+        "kind": "video"
+      },
+      {
+        "id": "cloud",
+        "seconds": 13.0,
+        "kind": "cloud"
+      },
+      {
+        "id": "lesson",
+        "seconds": 6.0,
+        "kind": "video"
+      },
+      {
+        "id": "close",
+        "seconds": 8.24,
+        "kind": "photo"
+      }
+    ],
+    "moving_source_video_seconds": 16.0,
+    "selected_assets": 4,
+    "narration_seconds": 59.243125,
+    "source_video_share_of_narration_percent": 27.0,
+    "average_scene_seconds": 8.46,
+    "pause_detection": {
+      "threshold_db": -36,
+      "minimum_seconds": 0.15
+    },
+    "export_loudness": {
+      "method": "FFmpeg ebur128=peak=true on final MP4",
+      "integrated_lufs": -19.1,
+      "loudness_range_lu": 4.4,
+      "true_peak_dbtp": -4.5
+    },
+    "hardware": {
+      "chip": "Apple M1",
+      "memory_gib": 16
+    }
+  },
+  "findings": [
+    {
+      "id": "V1",
+      "area": "voice",
+      "observation": "131 words across 59.243 seconds; longest detected silence 0.47 seconds.",
+      "implication": "Long silence is not demonstrated as the cause of perceived sluggishness; silence and WPM do not measure prosody.",
+      "next_test": "Same 15–20-second passage; compare baseline with shorter natural clauses and reviewed punctuation, at the same overall playback speed."
+    },
+    {
+      "id": "V2",
+      "area": "voice",
+      "observation": "Current Voicebox path is reference-conditioned Qwen3-TTS 0.6B Base on MLX; delivery instructions are explicitly rejected. Warm B adds 180 Hz, cuts 1100 Hz and uses mild compression.",
+      "implication": "A more emotional prompt is not currently supported; EQ changes timbre rather than language delivery.",
+      "next_test": "Compare raw and warm B at matched loudness using existing references. Review Amazon, Jeff Bezos, S3 and spoken dates with a display-text/spoken-text lexicon; listen before declaring a defect."
+    },
+    {
+      "id": "V3",
+      "area": "voice",
+      "observation": "Final integrated loudness -19.1 LUFS, true peak -4.5 dBTP; no clipping detected.",
+      "implication": "There is headroom for a louder final mix; this is not proof of a platform delivery violation.",
+      "next_test": "Compare a separate final mix near -16 to -17 LUFS with a true-peak ceiling of -1 dBTP on phone speakers. Preserve the global Voicebox defaults."
+    },
+    {
+      "id": "E1",
+      "area": "editing",
+      "time_range_seconds": [
+        0,
+        59.243125
+      ],
+      "observation": "Only 16 seconds use moving source video; two source videos are views of the same warehouse. Opening and closing reuse the warehouse photograph.",
+      "implication": "Limited variety and weak visual evidence for the historical/company-transformation story.",
+      "next_test": "Broaden reviewed footage coverage before increasing render complexity; match each shot to the specific spoken idea and retain author/year/source records."
+    },
+    {
+      "id": "E2",
+      "area": "editing",
+      "time_range_seconds": [
+        0,
+        45
+      ],
+      "observation": "Opening card lasts 6 seconds; cloud reveal starts at 32 seconds and its diagram holds for 13 seconds.",
+      "implication": "The books-to-cloud contrast arrives late; original graphics mostly finish animating early in the scene.",
+      "next_test": "Put the transformation in the first 2–3 seconds, then test meaningful shot changes and progressive diagram reveals; 2–4-second shots are an editorial experiment, not a mandatory cadence."
+    },
+    {
+      "id": "E3",
+      "area": "editing",
+      "observation": "All seven scenes repeat headline/media/caption/footer layout; footage is restricted to an 800px-high window in a 1920px frame. Source audio is muted, with no music or sound design.",
+      "implication": "Consistent cards aid reading but reduce immersion and variation.",
+      "next_test": "Use full-frame footage for selected beats, reduce simultaneous repeated text, add restrained licensed sound only after voice intelligibility is verified."
+    },
+    {
+      "id": "C1",
+      "area": "captions",
+      "observation": "25 phrase-level cues; transcript parser discards full-JSON tokens. Caption spelling was manually corrected against script and exact audio hash.",
+      "implication": "Phrase starts are usable for scenes; word-level highlighting and automatic pronunciation QA are not validated.",
+      "next_test": "Expose and assess existing whisper.cpp token timing first, then compare a language-appropriate forced aligner only if word drift remains. Keep ASR errors separate from audible TTS errors."
+    },
+    {
+      "id": "I1",
+      "area": "editor_integration",
+      "observation": "Native OpenReel project contains a single flattened final MP4. Source scenes and graphics remain editable in Remotion.",
+      "implication": "The current pilot does not yet validate native per-shot manual corrections feeding back into an automated edit.",
+      "next_test": "Map source media IDs, clip in/out ranges, narration and caption layers into a separate native OpenReel project and verify one manual correction round trip."
+    }
+  ],
+  "stack_decision": {
+    "keep": [
+      "Voicebox local clone",
+      "OpenReel Desktop review/editing target",
+      "FFmpeg audio/media processing",
+      "Remotion authored motion graphics"
+    ],
+    "evaluate_in_order": [
+      {
+        "tool": "Existing whisper.cpp token timing",
+        "purpose": "word-level caption timing",
+        "status": "available engine capability; parser integration pending",
+        "source": "https://github.com/ggml-org/whisper.cpp#word-level-timestamp-experimental"
+      },
+      {
+        "tool": "Qwen3-TTS 1.7B Base via reviewed MLX conversion",
+        "purpose": "controlled own-voice comparison",
+        "status": "not installed, pinned or benchmarked in this audit; separate model receipt and M1 memory/latency checks required",
+        "source": "https://github.com/QwenLM/Qwen3-TTS"
+      },
+      {
+        "tool": "PySceneDetect",
+        "purpose": "detect shot boundaries in acquired footage",
+        "status": "already declared as optional repository extra; not used by this pilot; cannot judge semantic relevance",
+        "source": "https://www.scenedetect.com/"
+      },
+      {
+        "tool": "SigLIP 2",
+        "purpose": "optional frame-to-phrase retrieval over a local source library",
+        "status": "research candidate; no model downloaded or Mac benchmark; similarity is not factual or rights verification",
+        "source": "https://huggingface.co/google/siglip2-base-patch16-224"
+      },
+      {
+        "tool": "WhisperX",
+        "purpose": "conditional forced alignment when existing timings are inadequate",
+        "status": "not installed; official CPU/Mac path documented, actual Russian/English accuracy and latency untested",
+        "source": "https://github.com/m-bain/whisperX"
+      }
+    ],
+    "paid_service_required_for_next_iteration": false,
+    "stage_1": "Mac-local controlled samples and editing; preserve accepted v1",
+    "stage_2": "Kevin/Windows only after profiling establishes a batch-performance need"
+  },
+  "experiment_plan": [
+    {
+      "order": 1,
+      "name": "voice phrasing",
+      "length_seconds": 20,
+      "controls": "same reference, model, speed and matched loudness",
+      "change": "shorter natural spoken clauses and reviewed proper-name pronunciation",
+      "acceptance": "owner recognizes identity and prefers naturalness; no missing or extra words"
+    },
+    {
+      "order": 2,
+      "name": "editing",
+      "length_seconds": 20,
+      "controls": "identical approved audio across variants",
+      "change": "stronger hook, more relevant shots, varied frame use and selective motion",
+      "acceptance": "owner can follow the story without visual dead time; captions remain readable"
+    },
+    {
+      "order": 3,
+      "name": "optional model comparison",
+      "length_seconds": 20,
+      "controls": "same reference, spoken script, language and postprocessing",
+      "change": "0.6B versus separately reviewed 1.7B Base",
+      "acceptance": "identity/naturalness improves enough to justify measured peak memory and generation latency"
+    }
+  ],
+  "not_claimed": [
+    "audience retention improvement",
+    "production-ready topic batch automation",
+    "native OpenReel layered handoff",
+    "new-model quality improvement",
+    "Russian pilot quality as evidence of English quality"
+  ],
+  "publishing_changed": false
+}
