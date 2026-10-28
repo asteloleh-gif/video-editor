@@ -350,8 +350,19 @@
           "A": 0,
           "B": 0
         },
-        "human_tonal_preference_and_identity_assessment": "pending_owner_AB_listening",
-        "audio_uploaded": false
+        "human_tonal_preference_and_identity_assessment": "owner_prefers_B_tonal_balance; identity_after_processing_not_separately_confirmed",
+        "audio_uploaded": false,
+        "full_length_B": {
+          "artifact": "tone-002-full",
+          "duration_seconds": 62.06316666666667,
+          "loudness_lufs": -22.07,
+          "true_peak_dbfs": -4.32,
+          "full_scale_samples": 0,
+          "tempo_or_pitch_shift": false,
+          "source_preserved": true,
+          "human_assessment": "preferred_tone_transferred_to_full_length; listening_pending",
+          "production_approved": false
+        }
       }
     }
   }
