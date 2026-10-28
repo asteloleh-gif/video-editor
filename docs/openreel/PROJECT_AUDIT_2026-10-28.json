@@ -344,5 +344,14 @@
     "tracking_upstream": false,
     "github_branch_lookup": "404 Branch not found",
     "push_or_pr_performed": false
+  },
+  "owner_followup": {
+    "four_stages_accepted": true,
+    "existing_canvas_required_from_stage_one": true,
+    "canvas_meaning": "existing Lazy Distribution Hub queue/review screen",
+    "new_canvas_or_second_publisher": false,
+    "canvas_video_integration_implemented": false,
+    "design_boundary": "preparation decisions are distinct from exact Hub plan/digest publication approval",
+    "existing_editorial_adapter_limit": "Threads/Text; not generic video project import"
   }
 }
