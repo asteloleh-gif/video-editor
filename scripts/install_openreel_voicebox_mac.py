@@ -22,6 +22,7 @@ sys.path.insert(0, str(REPO / "src"))
 HOME = Path.home() / ".local/share/astel-voicebox"
 PIN = "c9340465e5d37e684cc25bdbe746c4ccd45e165c"
 PATCH = REPO / "integration/voicebox/patches/0002-openreel-local-speech.patch"
+SEARCH_PATCH = REPO / "integration/video-search/0001-openreel-voicebox-and-search.patch"
 
 
 def run(args, **kwargs):
@@ -65,16 +66,16 @@ def install_bridge(ru=None, en=None):
     return root
 
 
-def build_source(node, pnpm):
-    fingerprint = hashlib.sha256(PATCH.read_bytes()).hexdigest()[:12]
+def build_source(node, pnpm, patch=PATCH):
+    fingerprint = hashlib.sha256(patch.read_bytes()).hexdigest()[:12]
     source = Path.home() / ".local/share/astel-openreel-voicebox" / f"source-{PIN[:8]}-{fingerprint}"
     if source.exists():
         raise FileExistsError(f"Build directory exists; use --built-source after inspecting it: {source}")
     source.parent.mkdir(parents=True, exist_ok=True)
     run(["git", "clone", "--local", REPO / "vendor/openreel", source])
     run(["git", "checkout", "--detach", PIN], cwd=source)
-    run(["git", "apply", "--check", PATCH], cwd=source)
-    run(["git", "apply", PATCH], cwd=source)
+    run(["git", "apply", "--check", patch], cwd=source)
+    run(["git", "apply", patch], cwd=source)
     env = {**os.environ, "PATH": f"{Path(node).parent}:{Path(pnpm).parent}:" + os.environ["PATH"]}
     run([pnpm, "install", "--frozen-lockfile"], cwd=source, env=env)
     for app in ("web", "desktop"):
@@ -85,9 +86,9 @@ def build_source(node, pnpm):
     return source
 
 
-def package(source, node):
+def package(source, node, patch=PATCH, destination=None):
     original = Path("/Applications/OpenReel.app")
-    destination = Path.home() / "Applications/OpenReel Astel.app"
+    destination = Path(destination) if destination else Path.home() / "Applications/OpenReel Astel.app"
     if not original.is_dir():
         raise FileNotFoundError("Install the original OpenReel desktop application first")
     if destination.exists():
@@ -95,7 +96,7 @@ def package(source, node):
     if subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip() != PIN:
         raise ValueError("The build must use the pinned OpenReel revision")
     # Verify the full source patch, including added files, before packaging.
-    run(["git", "apply", "--reverse", "--check", PATCH], cwd=source)
+    run(["git", "apply", "--reverse", "--check", patch], cwd=source)
     required = [source / "apps/web/dist/index.html", source / "apps/desktop/dist/main/index.js"]
     if not all(p.is_file() for p in required):
         raise FileNotFoundError("Build the renderer and desktop main process before packaging")
@@ -117,7 +118,7 @@ def package(source, node):
         # license alongside the local patch provenance for clarity.
         (resources / "LICENSES").mkdir(exist_ok=True)
         shutil.copyfile(source / "LICENSE", resources / "LICENSES/OpenReel-MIT.txt")
-        (resources / "astel-voicebox-build.json").write_text(json.dumps({"openreel_commit": PIN, "patch_sha256": hashlib.sha256(PATCH.read_bytes()).hexdigest(), "local_only": True}, indent=2))
+        (resources / "astel-voicebox-build.json").write_text(json.dumps({"openreel_commit": PIN, "patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(), "local_only": True}, indent=2))
         info_path = staged / "Contents/Info.plist"
         with info_path.open("rb") as stream:
             info = plistlib.load(stream)
@@ -134,6 +135,7 @@ def main():
     parser.add_argument("--ru-binding", type=Path)
     parser.add_argument("--en-binding", type=Path)
     parser.add_argument("--bridge-only", action="store_true")
+    parser.add_argument("--with-video-search", action="store_true", help="Include the free local YouTube search panel")
     parser.add_argument("--built-source", type=Path, help="Use an already built and reviewed patched clone")
     parser.add_argument("--node", default=shutil.which("node"))
     parser.add_argument("--pnpm", default=shutil.which("pnpm"))
@@ -151,8 +153,11 @@ def main():
         parser.error("Node 22 or newer is required")
     if not args.built_source and not args.pnpm:
         parser.error("Supply --pnpm to build the pinned candidate")
-    source = args.built_source.resolve() if args.built_source else build_source(args.node, args.pnpm)
-    app = package(source, args.node)
+    patch = SEARCH_PATCH if args.with_video_search else PATCH
+    if args.with_video_search:
+        run([sys.executable, REPO / "scripts/setup_video_search_mac.py"])
+    source = args.built_source.resolve() if args.built_source else build_source(args.node, args.pnpm, patch)
+    app = package(source, args.node, patch)
     print(json.dumps({"app": str(app), "bridge": str(root), "original_preserved": "/Applications/OpenReel.app"}, ensure_ascii=False, indent=2))
 
 

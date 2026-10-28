@@ -2,7 +2,11 @@
 
 ## Voicebox local voice pilot
 
-The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox Qwen MLX API runtime and an Astel reference/manifest adapter. See [Voicebox setup and next steps](docs/voicebox/README.md) and [source audit](docs/voicebox/RESEARCH.md). Own-voice quality acceptance is pending; editor and publishing integration follow that test.
+The `integration/voicebox-local-first` branch adds an isolated, pinned Voicebox Qwen MLX API runtime and an Astel reference/manifest adapter. See [Voicebox setup and next steps](docs/voicebox/README.md) and [source audit](docs/voicebox/RESEARCH.md). The separate OpenReel Astel app now includes a local speech panel; see [text-to-speech setup and validation](docs/voicebox/OPENREEL_LOCAL_SPEECH.md). Publishing remains separate.
+
+## Local video search in OpenReel Astel
+
+The installed candidate includes **AI Generate → Найти видео**: YouTube topic search, thumbnails, duration filters, saved selections and TXT link export, with no paid search API. See [how to use and install](docs/openreel/VIDEO_SEARCH.md). Voicebox remains available beside it; this search feature does not download or publish videos.
 
 ## OpenReel integration candidate — Mac first
 

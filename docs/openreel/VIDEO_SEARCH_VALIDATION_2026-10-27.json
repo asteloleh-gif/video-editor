@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-27",
+  "branch": "integration/voicebox-local-first",
+  "upstream_commit": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "patch_sha256": "02b430ae4bc4812a3962cb257dfceb460636dc226f6d3be0d7dbe9218e2ac1af",
+  "tests": {
+    "python_search": 12,
+    "python_search_and_voicebox_jobs": 28,
+    "desktop_ipc_search_and_voicebox": 19,
+    "web_search_and_voicebox_and_timeline": 12,
+    "web_typecheck": "passed",
+    "desktop_typecheck": "passed",
+    "renderer_build": "passed",
+    "main_build": "passed",
+    "patch_check_on_clean_vendor": "passed",
+    "installed_bundle_signature": "passed"
+  },
+  "live_search": {
+    "relevance_25": {
+      "results": 25,
+      "elapsed_seconds": 2.57,
+      "cached": false
+    },
+    "date_10": {
+      "results": 10,
+      "elapsed_seconds": 1.63,
+      "cached": false
+    },
+    "bulk_limit_100": {
+      "results": 97,
+      "unique": true,
+      "note": "YouTube returned fewer unique valid video entries than the requested maximum."
+    }
+  },
+  "native_ui": {
+    "installed_app": "~/Applications/OpenReel Astel.app",
+    "search_returned_25": true,
+    "second_topic_search_returned_25": true,
+    "thumbnails_visible": true,
+    "short_duration_filter_shown_17_of_25": true,
+    "two_selected_across_searches": true,
+    "txt_export_exactly_matches_selected_urls": true,
+    "restart_selection_recovery": true,
+    "voicebox_profiles_and_ready_audio_restored": true,
+    "voice_generation_rerun": false,
+    "clipboard_manual_verification": false,
+    "test_selections_cleared_after_verification": true
+  },
+  "preservation": {
+    "vendor_clean": true,
+    "original_app": "/Applications/OpenReel.app",
+    "prior_astel_bundle_backup": "~/.local/share/astel-openreel-voicebox/builds/OpenReel Astel before video search 20261027-202800.app.disabled",
+    "existing_voicebox_timeline_clips": 2,
+    "paid_api_enabled": false,
+    "cookies_or_login_used": false,
+    "video_downloads": false,
+    "publishing_changes": false
+  },
+  "limits": [
+    "YouTube metadata only; source quality and rights are not inferred.",
+    "YouTube may change extraction or throttle searches; no paid fallback.",
+    "Search/result/selection storage is shared across projects in this local app.",
+    "Full video export and new voice generation are outside these checks."
+  ]
+}

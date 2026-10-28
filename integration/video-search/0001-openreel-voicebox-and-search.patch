@@ -1,0 +1,969 @@
+diff --git a/apps/desktop/src/main/index.ts b/apps/desktop/src/main/index.ts
+index 0771440..90dd050 100644
+--- a/apps/desktop/src/main/index.ts
++++ b/apps/desktop/src/main/index.ts
+@@ -26,7 +26,9 @@ import { cloudFetch } from "./ipc/cloud";
+ import { applyWindowControl, windowIsMaximized } from "./window-controls";
+ import { installApplicationMenu, sendMenuAction } from "./app-menu";
+ import { attachUnsavedGuard, markQuitting } from "./lifecycle";
+-import { initAutoUpdater } from "./updater";
++import os from "node:os";
++import { registerVoiceboxHandlers } from "./ipc/voicebox";
++import { registerVideoSearchHandlers } from "./ipc/video-search";
+ import { initCrashReporter, reportError } from "./crash-reporter";
+ import { migrateGpuCacheOnUpgrade } from "./gpu-cache-migration";
+ import {
+@@ -85,6 +87,10 @@ import type {
+   AuroraSequenceSessionStartArgs,
+ } from "../shared/ipc-contract";
+ 
++// This candidate has its own projects, process lock and MCP descriptor.
++app.setName("OpenReel Astel");
++app.setPath("userData", path.join(app.getPath("appData"), "OpenReel Astel"));
++process.env.OPENREEL_MCP_ENDPOINT_FILE = path.join(os.homedir(), ".openreel", "astel-voicebox-mcp-endpoint.json");
+ registerAppSchemePrivileges();
+ 
+ // Register crash/error reporting as early as possible so main-process faults and
+@@ -140,6 +146,8 @@ function createWindow(): void {
+ app.whenReady().then(() => {
+   if (!hasSingleInstanceLock) return;
+   handleAppScheme(rendererRoot());
++  registerVoiceboxHandlers();
++  registerVideoSearchHandlers();
+   handle(CHANNELS.probeHardware, z.undefined(), () => collectHardwareInfo());
+   handle(CHANNELS.fsShowSaveDialog, saveDialogArgsSchema, showSaveDialog);
+   handle(CHANNELS.fsShowOpenDialog, openDialogArgsSchema, showOpenDialog);
+@@ -259,7 +267,7 @@ app.whenReady().then(() => {
+   handle(CHANNELS.mcpRotateToken, z.undefined(), () => rotateMcpToken());
+   handle(CHANNELS.mcpTestConnection, z.undefined(), () => testMcpConnection());
+   createWindow();
+-  initAutoUpdater();
++  // Candidate updates are installed explicitly; upstream updater is disabled.
+   startMcpServer().catch((error) =>
+     reportError({
+       type: "mcp-start-failed",
+diff --git a/apps/desktop/src/main/ipc/video-search.test.ts b/apps/desktop/src/main/ipc/video-search.test.ts
+new file mode 100644
+index 0000000..63d45ff
+--- /dev/null
++++ b/apps/desktop/src/main/ipc/video-search.test.ts
+@@ -0,0 +1,47 @@
++import { EventEmitter } from "node:events";
++import { PassThrough } from "node:stream";
++import { beforeEach, describe, expect, it, vi } from "vitest";
++import { CHANNELS, videoSearchSchema } from "../../shared/ipc-contract";
++const mock = vi.hoisted(() => ({ handlers: new Map<string, Function>(), spawn: vi.fn() }));
++vi.mock("electron", () => ({ ipcMain: { handle: (name: string, fn: Function) => mock.handlers.set(name, fn) } }));
++vi.mock("node:child_process", () => ({ spawn: mock.spawn }));
++import { registerVideoSearchHandlers } from "./video-search";
++const request = { id: "12345678-1234-4234-8234-123456789abc", query: "street food", limit: 10, order: "relevance" };
++function sender(id: number) { return Object.assign(new EventEmitter(), { id }); }
++function child() { return Object.assign(new EventEmitter(), { stdout: new PassThrough(), stderr: new PassThrough(), stdin: new PassThrough(), kill: vi.fn() }); }
++beforeEach(() => { mock.spawn.mockReset(); mock.handlers.clear(); registerVideoSearchHandlers(); });
++describe("local video search", () => {
++  it.each([{ query: "" }, { query: "a\nb" }, { limit: 1000 }, { limit: true }, { order: "x" }, { path: "/private" }, { id: "../x" }])("rejects unsupported input before starting a process", bad => {
++    expect(videoSearchSchema.safeParse({ ...request, ...bad }).success).toBe(false);
++    expect(mock.handlers.get(CHANNELS.videoSearchQuery)!({ sender: sender(1) }, { ...request, ...bad }).ok).toBe(false);
++    expect(mock.spawn).not.toHaveBeenCalled();
++  });
++  it("uses a fixed program and JSON stdin without a shell; deduplicates an active request", async () => {
++    const process = child(); mock.spawn.mockReturnValue(process); const owner = sender(2);
++    const pending = mock.handlers.get(CHANNELS.videoSearchQuery)!({ sender: owner }, request);
++    expect(mock.handlers.get(CHANNELS.videoSearchQuery)!({ sender: owner }, request).code).toBe("busy");
++    expect(mock.spawn.mock.calls[0][0]).toMatch(/astel-video-search\/venv\/bin\/python$/);
++    expect(mock.spawn.mock.calls[0][1]).toEqual(["-m", "video_editor.video_search"]);
++    expect(mock.spawn.mock.calls[0][2].shell).toBeUndefined();
++    expect(process.stdin.read().toString()).toBe(JSON.stringify({ query: request.query, limit: 10, order: "relevance" }));
++    process.stdout.write(JSON.stringify({ ok: true, results: [] })); process.emit("close", 0);
++    expect(await pending).toEqual({ ok: true, results: [] });
++    expect(owner.listenerCount("destroyed")).toBe(0);
++  });
++  it("only the owning window and matching request can cancel", async () => {
++    const process = child(); mock.spawn.mockReturnValue(process); const owner = sender(3);
++    const pending = mock.handlers.get(CHANNELS.videoSearchQuery)!({ sender: owner }, request);
++    const cancel = mock.handlers.get(CHANNELS.videoSearchCancel)!;
++    cancel({ sender: sender(4) }, { id: request.id });
++    cancel({ sender: owner }, { id: "aaaaaaaa-1234-4234-8234-123456789abc" });
++    expect(process.kill).not.toHaveBeenCalled();
++    cancel({ sender: owner }, { id: request.id });
++    expect((await pending).code).toBe("cancelled"); expect(process.kill).toHaveBeenCalledOnce();
++  });
++  it("stops the process when its window closes", async () => {
++    const process = child(); mock.spawn.mockReturnValue(process); const owner = sender(5);
++    const pending = mock.handlers.get(CHANNELS.videoSearchQuery)!({ sender: owner }, request);
++    owner.emit("destroyed"); expect((await pending).code).toBe("cancelled");
++    expect(process.kill).toHaveBeenCalledOnce();
++  });
++});
+diff --git a/apps/desktop/src/main/ipc/video-search.ts b/apps/desktop/src/main/ipc/video-search.ts
+new file mode 100644
+index 0000000..aba6dfe
+--- /dev/null
++++ b/apps/desktop/src/main/ipc/video-search.ts
+@@ -0,0 +1,54 @@
++import { ipcMain } from "electron";
++import { spawn } from "node:child_process";
++import path from "node:path";
++import os from "node:os";
++import { CHANNELS, videoSearchSchema, videoSearchCancelSchema } from "../../shared/ipc-contract";
++
++const root = path.join(os.homedir(), ".local/share/astel-video-search");
++const active = new Map<number, { id: string; cancel: () => void }>();
++const failure = (code: string, message: string) => ({ ok: false, code, message });
++
++export function registerVideoSearchHandlers(): void {
++  ipcMain.handle(CHANNELS.videoSearchQuery, (event, raw) => {
++    const parsed = videoSearchSchema.safeParse(raw);
++    if (!parsed.success) return failure("invalid_request", "Введите тему и параметры поиска.");
++    const owner = event.sender.id;
++    if (active.has(owner)) return failure("busy", "Дождитесь завершения текущего поиска.");
++    const { id, ...request } = parsed.data;
++    return new Promise(resolve => {
++      const child = spawn(path.join(root, "venv/bin/python"), ["-m", "video_editor.video_search"], {
++        env: { ...process.env, PYTHONPATH: path.join(root, "src") },
++        stdio: ["pipe", "pipe", "pipe"], windowsHide: true,
++      });
++      let output = "";
++      let settled = false;
++      const finish = (result: unknown) => {
++        if (settled) return;
++        settled = true; clearTimeout(timer);
++        event.sender.removeListener("destroyed", cancel);
++        if (active.get(owner)?.id === id) active.delete(owner);
++        resolve(result);
++      };
++      const cancel = () => { child.kill(); finish(failure("cancelled", "Поиск остановлен.")); };
++      const timer = setTimeout(() => { child.kill(); finish(failure("timeout", "Поиск занял слишком долго. Повторите с меньшим количеством результатов.")); }, 60_000);
++      active.set(owner, { id, cancel });
++      event.sender.once("destroyed", cancel);
++      child.stdout.on("data", (chunk: Buffer) => {
++        output += chunk.toString();
++        if (output.length > 1_000_000) { child.kill(); finish(failure("invalid_response", "Слишком большой ответ поиска.")); }
++      });
++      child.stderr.resume();
++      child.stdin.on("error", () => {});
++      child.on("error", () => finish(failure("not_installed", "Локальный модуль поиска не установлен.")));
++      child.on("close", code => {
++        if (code !== 0) return finish(failure("unavailable", "YouTube не ответил. Проверьте интернет и повторите позже."));
++        try { finish(JSON.parse(output)); } catch { finish(failure("invalid_response", "Не удалось прочитать результаты поиска.")); }
++      });
++      child.stdin.end(JSON.stringify(request));
++    });
++  });
++  ipcMain.handle(CHANNELS.videoSearchCancel, (event, raw) => {
++    const parsed = videoSearchCancelSchema.safeParse(raw);
++    if (parsed.success && active.get(event.sender.id)?.id === parsed.data.id) active.get(event.sender.id)?.cancel();
++  });
++}
+diff --git a/apps/desktop/src/main/ipc/voicebox.test.ts b/apps/desktop/src/main/ipc/voicebox.test.ts
+new file mode 100644
+index 0000000..acbb2e6
+--- /dev/null
++++ b/apps/desktop/src/main/ipc/voicebox.test.ts
+@@ -0,0 +1,18 @@
++import { describe, expect, it } from "vitest";
++import { voiceboxJobSchema, voiceboxSubmitSchema } from "../../shared/ipc-contract";
++
++describe("Voicebox IPC boundary", () => {
++  const request = { id: "12345678-1234-4234-8234-123456789abc", profile: "oleh-en", text: "Hello!", speed: 1.02, warm: false, project_id: "project-a" };
++  it("allows an approved local voice", () => expect(voiceboxSubmitSchema.parse(request)).toEqual(request));
++  it.each([
++    { profile: "/private/voice.json" }, { text: " " }, { speed: NaN }, { speed: 2 },
++    { id: "../../x" }, { path: "/private/voice.wav" }, { text: "a".repeat(5001) },
++  ])("rejects unknown profiles, paths and invalid requests", bad => {
++    expect(voiceboxSubmitSchema.safeParse({ ...request, ...bad }).success).toBe(false);
++  });
++  it("status/cancel/audio accept only UUID jobs", () => {
++    expect(voiceboxJobSchema.safeParse({ id: request.id }).success).toBe(true);
++    expect(voiceboxJobSchema.safeParse({ id: "../test" }).success).toBe(false);
++    expect(voiceboxJobSchema.safeParse({ id: request.id, path: "/tmp/test" }).success).toBe(false);
++  });
++});
+diff --git a/apps/desktop/src/main/ipc/voicebox.ts b/apps/desktop/src/main/ipc/voicebox.ts
+new file mode 100644
+index 0000000..80e6a30
+--- /dev/null
++++ b/apps/desktop/src/main/ipc/voicebox.ts
+@@ -0,0 +1,61 @@
++import { spawn } from "node:child_process";
++import { createHash } from "node:crypto";
++import { readFile, realpath, stat } from "node:fs/promises";
++import os from "node:os";
++import path from "node:path";
++import { z } from "zod";
++import { handle } from "./index";
++import { CHANNELS, voiceboxJobSchema, voiceboxSubmitSchema } from "../../shared/ipc-contract";
++
++const home = path.join(os.homedir(), ".local", "share", "astel-voicebox");
++const root = path.join(home, "openreel");
++const python = path.join(home, "venv", "bin", "python");
++const message = "Voicebox недоступен. Проверьте локальную установку и попробуйте снова.";
++
++// Fixed executable and arguments; narration is JSON on stdin, never shell code.
++export function runVoicebox(command: string, id?: string, request?: unknown): Promise<unknown> {
++  return new Promise((resolve, reject) => {
++    const child = spawn(python, ["-m", "video_editor.voicebox_jobs", command, ...(id ? ["--id", id] : [])], {
++      env: { ...process.env, ASTEL_VOICEBOX_HOME: home, PYTHONPATH: path.join(root, "src") },
++      stdio: ["pipe", "pipe", "pipe"],
++      windowsHide: true,
++    });
++    let output = "";
++    const timer = setTimeout(() => { child.kill(); reject(new Error(message)); }, 40_000);
++    child.stdout.on("data", (data: Buffer) => {
++      output += data.toString();
++      if (output.length > 100_000) { child.kill(); reject(new Error(message)); }
++    });
++    // Keep private reference paths/diagnostics out of renderer and crash reports.
++    child.stderr.resume();
++    child.on("error", () => { clearTimeout(timer); reject(new Error(message)); });
++    child.on("close", code => {
++      clearTimeout(timer);
++      if (code !== 0) return reject(new Error(message));
++      try { resolve(JSON.parse(output)); } catch { reject(new Error(message)); }
++    });
++    child.stdin.on("error", () => {});
++    child.stdin.end(request === undefined ? "" : JSON.stringify(request));
++  });
++}
++
++export async function readVoiceboxAudio(id: string): Promise<ArrayBuffer> {
++  const result = await runVoicebox("audio", id) as { path: string; sha256: string };
++  const expected = path.join(root, "jobs", id, "narration.wav");
++  // Both the Python receipt and the real filesystem location must agree.
++  if (result.path !== expected || await realpath(expected) !== expected || (await stat(expected)).size > 100 * 1024 * 1024) {
++    throw new Error("Озвучка недоступна.");
++  }
++  const data = await readFile(expected);
++  if (createHash("sha256").update(data).digest("hex") !== result.sha256) throw new Error("Озвучка изменилась.");
++  return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
++}
++
++export function registerVoiceboxHandlers(): void {
++  handle(CHANNELS.voiceboxProfiles, z.undefined(), () => runVoicebox("profiles"));
++  handle(CHANNELS.voiceboxSubmit, voiceboxSubmitSchema, request => runVoicebox("submit", undefined, request));
++  handle(CHANNELS.voiceboxStatus, voiceboxJobSchema, ({ id }) => runVoicebox("status", id));
++  handle(CHANNELS.voiceboxResume, voiceboxJobSchema, ({ id }) => runVoicebox("resume", id));
++  handle(CHANNELS.voiceboxCancel, voiceboxJobSchema, ({ id }) => runVoicebox("cancel", id));
++  handle(CHANNELS.voiceboxAudio, voiceboxJobSchema, ({ id }) => readVoiceboxAudio(id));
++}
+diff --git a/apps/desktop/src/preload/index.ts b/apps/desktop/src/preload/index.ts
+index f7f4f2c..468d8d9 100644
+--- a/apps/desktop/src/preload/index.ts
++++ b/apps/desktop/src/preload/index.ts
+@@ -4,6 +4,18 @@ import type { McpBridgeRequest } from "../shared/mcp";
+ 
+ contextBridge.exposeInMainWorld("openreel", {
+   platform: "desktop",
++  videoSearch: {
++    query: (request: unknown) => ipcRenderer.invoke(CHANNELS.videoSearchQuery, request),
++    cancel: (id: string) => ipcRenderer.invoke(CHANNELS.videoSearchCancel, { id }),
++  },
++  voicebox: {
++    profiles: () => ipcRenderer.invoke(CHANNELS.voiceboxProfiles),
++    submit: (request: unknown) => ipcRenderer.invoke(CHANNELS.voiceboxSubmit, request),
++    status: (id: string) => ipcRenderer.invoke(CHANNELS.voiceboxStatus, { id }),
++    resume: (id: string) => ipcRenderer.invoke(CHANNELS.voiceboxResume, { id }),
++    cancel: (id: string) => ipcRenderer.invoke(CHANNELS.voiceboxCancel, { id }),
++    audio: (id: string) => ipcRenderer.invoke(CHANNELS.voiceboxAudio, { id }),
++  },
+   publicOrigin: "https://app.openreel.video",
+   probeHardware: () => ipcRenderer.invoke(CHANNELS.probeHardware, undefined),
+   onMenuAction: (cb: (id: string) => void) => {
+diff --git a/apps/desktop/src/shared/channels.ts b/apps/desktop/src/shared/channels.ts
+index ded811d..a165422 100644
+--- a/apps/desktop/src/shared/channels.ts
++++ b/apps/desktop/src/shared/channels.ts
+@@ -1,4 +1,12 @@
+ export const CHANNELS = {
++  videoSearchQuery: "openreel:videoSearch:query",
++  videoSearchCancel: "openreel:videoSearch:cancel",
++  voiceboxProfiles: "openreel:voicebox:profiles",
++  voiceboxSubmit: "openreel:voicebox:submit",
++  voiceboxStatus: "openreel:voicebox:status",
++  voiceboxResume: "openreel:voicebox:resume",
++  voiceboxCancel: "openreel:voicebox:cancel",
++  voiceboxAudio: "openreel:voicebox:audio",
+   probeHardware: "openreel:probeHardware",
+   fsShowSaveDialog: "openreel:fs:showSaveDialog",
+   fsShowOpenDialog: "openreel:fs:showOpenDialog",
+diff --git a/apps/desktop/src/shared/ipc-contract.ts b/apps/desktop/src/shared/ipc-contract.ts
+index 3870cf7..a3da2ba 100644
+--- a/apps/desktop/src/shared/ipc-contract.ts
++++ b/apps/desktop/src/shared/ipc-contract.ts
+@@ -283,3 +283,21 @@ export const audioStreamInfoSchema = z.object({
+   language: z.string().optional(),
+ });
+ export type AudioStreamInfo = z.infer<typeof audioStreamInfoSchema>;
++
++// Astel local speech: the renderer supplies approved aliases, never file paths.
++export const voiceboxJobSchema = z.object({ id: z.string().uuid() }).strict();
++export const voiceboxSubmitSchema = z.object({
++  id: z.string().uuid(),
++  profile: z.enum(["oleh-ru", "oleh-en"]),
++  text: z.string().trim().min(1).max(5000),
++  speed: z.number().finite().min(0.75).max(1.5),
++  warm: z.boolean(),
++  project_id: z.string().min(1).max(128),
++}).strict();
++
++export const videoSearchSchema = z.object({
++  id: z.string().uuid(), query: z.string().trim().min(1).max(200).refine(value => !/[\x00-\x1f]/.test(value)),
++  limit: z.union([z.literal(10), z.literal(25), z.literal(50), z.literal(100)]),
++  order: z.enum(["relevance", "date"]),
++}).strict();
++export const videoSearchCancelSchema = z.object({ id: z.string().uuid() }).strict();
+diff --git a/apps/web/src/components/editor/AIGenTab.tsx b/apps/web/src/components/editor/AIGenTab.tsx
+index d2f62a9..c8e97e7 100644
+--- a/apps/web/src/components/editor/AIGenTab.tsx
++++ b/apps/web/src/components/editor/AIGenTab.tsx
+@@ -1,5 +1,6 @@
+ import React, { useState, useCallback } from "react";
+ import {
++  Search,
+   Mic,
+   Subtitles,
+   Palette,
+@@ -15,6 +16,7 @@ import { ToolcraftButton as Button } from "@openreel/ui";
+ import { ToolcraftClickableCard as ClickableCard } from "@openreel/ui";
+ import { ToolcraftText as Text } from "@openreel/ui";
+ import { AutoCaptionPanel } from "./inspector/AutoCaptionPanel";
++import { VideoSearchPanel } from "./inspector/VideoSearchPanel";
+ import { TextToSpeechPanel } from "./inspector/TextToSpeechPanel";
+ import { FilterPresetsPanel } from "./inspector/FilterPresetsPanel";
+ import { MusicLibraryPanel } from "./inspector/MusicLibraryPanel";
+@@ -23,7 +25,7 @@ import { MultiCameraPanel } from "./inspector/MultiCameraPanel";
+ import { useTtsAudioStore } from "../../stores/tts-store";
+ import { toast } from "../../stores/notification-store";
+ 
+-type FeatureId = "templates" | "captions" | "tts" | "filters" | "music" | "multicam" | null;
++type FeatureId = "search" | "templates" | "captions" | "tts" | "filters" | "music" | "multicam" | null;
+ 
+ interface FeatureCardProps {
+   icon: React.ElementType;
+@@ -123,6 +125,8 @@ export const AIGenTab: React.FC = () => {
+ 
+   const renderActivePanel = () => {
+     switch (activeFeature) {
++      case "search":
++        return <VideoSearchPanel />;
+       case "templates":
+         return <TemplatesBrowserPanel />;
+       case "captions":
+@@ -172,6 +176,13 @@ export const AIGenTab: React.FC = () => {
+           </Text>
+         </div>
+ 
++        <FeatureSection title="Материалы" icon={Search}>
++          <FeatureCard icon={Search} title="Найти видео" description="Поиск YouTube по теме и подборка ссылок"
++            iconColor="text-primary" iconBg="bg-primary/20" activeBorder="border-primary/50"
++            activeBg="bg-primary/10" activeRing="ring-primary/30" isActive={activeFeature === "search"}
++            onClick={() => handleFeatureClick("search")} />
++        </FeatureSection>
++
+         <FeatureSection title="Content Generation" icon={Wand2}>
+           <FeatureCard
+             icon={Mic}
+diff --git a/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx b/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx
+index d3aed75..760ec20 100644
+--- a/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx
++++ b/apps/web/src/components/editor/inspector/TextToSpeechPanel.tsx
+@@ -1,4 +1,5 @@
+ import React, { useState } from "react";
++import { VoiceboxPanel } from "./VoiceboxPanel";
+ import {
+   Mic,
+   Loader2,
+@@ -21,7 +22,7 @@ import { ModelSelector } from "./ModelSelector";
+ import { EnhancedTextPreview } from "./EnhancedTextPreview";
+ import { AudioResult } from "./AudioResult";
+ 
+-export const TextToSpeechPanel: React.FC = () => {
++const ElevenLabsPanel: React.FC = () => {
+   const {
+     defaultLlmProvider,
+     llmBaseUrl,
+@@ -292,4 +293,16 @@ export const TextToSpeechPanel: React.FC = () => {
+   );
+ };
+ 
++export const TextToSpeechPanel: React.FC = () => {
++  const [provider, setProvider] = useState("voicebox");
++  return <div className="space-y-3">
++    <label className="block text-xs text-fg-2">Озвучка
++      <select aria-label="Сервис озвучки" value={provider} onChange={e => setProvider(e.target.value)} className="mt-1 w-full rounded bg-panel border border-border p-2 text-fg">
++        <option value="voicebox">Voicebox · мой голос</option>
++        <option value="elevenlabs">ElevenLabs</option>
++      </select>
++    </label>
++    {provider === "voicebox" ? <VoiceboxPanel /> : <ElevenLabsPanel />}
++  </div>;
++};
+ export default TextToSpeechPanel;
+diff --git a/apps/web/src/components/editor/inspector/VideoSearchPanel.test.tsx b/apps/web/src/components/editor/inspector/VideoSearchPanel.test.tsx
+new file mode 100644
+index 0000000..719013d
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/VideoSearchPanel.test.tsx
+@@ -0,0 +1,34 @@
++import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
++import { afterEach, beforeEach, expect, it, vi } from "vitest";
++import { VideoSearchPanel } from "./VideoSearchPanel";
++const row = { id: "QdBZY2fkU-0", title: "Test video", channel: "Test channel", duration: 90, views: 100, live: false, url: "javascript:ignored", thumbnail: "file:///ignored" };
++const query = vi.fn(); const cancel = vi.fn().mockResolvedValue(undefined);
++beforeEach(() => { localStorage.clear(); query.mockReset(); cancel.mockClear(); window.openreel = { videoSearch: { query, cancel } } as any; });
++afterEach(() => { cleanup(); delete window.openreel; });
++it("recovers corrupt saved state and preserves selected canonical links on remount", async () => {
++  localStorage.setItem("astel.videoSearch.v1", "null");
++  query.mockResolvedValue({ ok: true, query: "food", results: [row], from_cache: false });
++  const view = render(<VideoSearchPanel />);
++  fireEvent.change(screen.getByLabelText("Тема поиска"), { target: { value: "food" } });
++  fireEvent.click(screen.getByRole("button", { name: "Найти видео" }));
++  await screen.findByText("Test video");
++  expect(screen.getByRole("link", { name: "Test video" }).getAttribute("href")).toBe("https://www.youtube.com/watch?v=QdBZY2fkU-0");
++  fireEvent.click(screen.getByLabelText("В подборку: Test video"));
++  view.unmount(); render(<VideoSearchPanel />);
++  fireEvent.click(screen.getByRole("button", { name: "Подборка · 1" }));
++  expect(screen.getByLabelText("В подборку: Test video")).toBeChecked();
++  fireEvent.change(screen.getByLabelText("Фильтр длительности"), { target: { value: "long" } });
++  expect(screen.queryByText("Test video")).toBeNull();
++});
++it("cancels on panel close and ignores the late response", async () => {
++  let finish!: Function;
++  query.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
++  const view = render(<VideoSearchPanel />);
++  fireEvent.change(screen.getByLabelText("Тема поиска"), { target: { value: "food" } });
++  fireEvent.click(screen.getByRole("button", { name: "Найти видео" }));
++  await waitFor(() => expect(query).toHaveBeenCalledOnce());
++  const id = query.mock.calls[0][0].id;
++  view.unmount(); expect(cancel).toHaveBeenCalledWith(id);
++  await act(async () => finish({ ok: true, query: "food", results: [row] }));
++  render(<VideoSearchPanel />); expect(screen.queryByText("Test video")).toBeNull();
++});
+diff --git a/apps/web/src/components/editor/inspector/VideoSearchPanel.tsx b/apps/web/src/components/editor/inspector/VideoSearchPanel.tsx
+new file mode 100644
+index 0000000..4c69123
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/VideoSearchPanel.tsx
+@@ -0,0 +1,113 @@
++import { useEffect, useRef, useState } from "react";
++import type { VideoSearchItem, VideoSearchRequest } from "../../../types/global";
++
++const KEY = "astel.videoSearch.v1";
++const ID = /^[A-Za-z0-9_-]{11}$/;
++const button = "rounded border border-border px-2 py-2 text-xs hover:bg-white/10 disabled:opacity-40";
++const control = "mt-1 w-full rounded border border-border bg-panel p-2 text-fg";
++function items(value: unknown): VideoSearchItem[] {
++  if (!Array.isArray(value)) return [];
++  const seen = new Set<string>();
++  const result: VideoSearchItem[] = [];
++  for (const raw of value) {
++    if (!raw || typeof raw !== "object") continue;
++    const v = raw as Partial<VideoSearchItem>;
++    if (typeof v.id !== "string" || !ID.test(v.id) || typeof v.title !== "string" || seen.has(v.id)) continue;
++    seen.add(v.id);
++    result.push({
++      id: v.id, title: v.title.slice(0, 500), channel: typeof v.channel === "string" ? v.channel.slice(0, 200) : "Канал не указан",
++      url: `https://www.youtube.com/watch?v=${v.id}`, thumbnail: `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`, live: v.live === true,
++      duration: typeof v.duration === "number" && Number.isFinite(v.duration) && v.duration >= 0 ? v.duration : null,
++      views: typeof v.views === "number" && Number.isFinite(v.views) && v.views >= 0 ? v.views : null,
++    });
++    if (result.length === 500) break;
++  }
++  return result;
++}
++function saved() {
++  try {
++    const value = JSON.parse(localStorage.getItem(KEY) || "{}");
++    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
++  } catch { return {}; }
++}
++function duration(value: number | null): string {
++  if (value === null) return "Длительность не указана";
++  const s = Math.floor(value);
++  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
++}
++export function VideoSearchPanel() {
++  const api = window.openreel?.videoSearch;
++  const [initial] = useState(saved);
++  const [query, setQuery] = useState<string>(typeof initial.query === "string" ? initial.query : "");
++  const [limit, setLimit] = useState<VideoSearchRequest["limit"]>(25);
++  const [order, setOrder] = useState<VideoSearchRequest["order"]>("relevance");
++  const [results, setResults] = useState<VideoSearchItem[]>(() => items(initial.results));
++  const [selected, setSelected] = useState<VideoSearchItem[]>(() => items(initial.selected));
++  const [loadedQuery, setLoadedQuery] = useState<string>(typeof initial.loadedQuery === "string" ? initial.loadedQuery : "");
++  const [filter, setFilter] = useState("all");
++  const [showSelected, setShowSelected] = useState(false);
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState("");
++  const [message, setMessage] = useState("");
++  const requestId = useRef<string | null>(null);
++  const alive = useRef(true);
++  useEffect(() => {
++    alive.current = true;
++    return () => { alive.current = false; if (requestId.current) void api?.cancel(requestId.current).catch(() => {}); requestId.current = null; };
++  }, [api]);
++  useEffect(() => {
++    try { localStorage.setItem(KEY, JSON.stringify({ query, loadedQuery, results, selected })); } catch { setError("Подборка не сохранилась. Сохраните ссылки в файл."); }
++  }, [query, loadedQuery, results, selected]);
++  async function search() {
++    if (!api || requestId.current || !query.trim()) return;
++    const id = crypto.randomUUID();
++    requestId.current = id; setBusy(true); setError(""); setMessage(""); setShowSelected(false);
++    try {
++      const response = await api.query({ id, query: query.trim(), limit, order });
++      if (!alive.current || requestId.current !== id) return;
++      if (!response.ok) { if (response.code !== "cancelled") setError(response.message); return; }
++      setResults(items(response.results)); setLoadedQuery(response.query);
++      setMessage(response.from_cache ? "Недавний результат поиска" : "Поиск завершён");
++    } catch {
++      if (alive.current && requestId.current === id) setError("Поиск недоступен. Проверьте локальную установку и интернет.");
++    } finally {
++      if (alive.current && requestId.current === id) { requestId.current = null; setBusy(false); }
++    }
++  }
++  async function copy() {
++    try { await navigator.clipboard.writeText(selected.map(v => v.url).join("\n")); if (alive.current) setMessage("Ссылки скопированы"); }
++    catch { if (alive.current) setError("Не удалось скопировать. Используйте «Сохранить ссылки»."); }
++  }
++  function download() {
++    const blob = new Blob([selected.map(v => v.url).join("\n") + "\n"], { type: "text/plain;charset=utf-8" });
++    const url = URL.createObjectURL(blob);
++    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "astel-video-links.txt"; anchor.click();
++    setTimeout(() => URL.revokeObjectURL(url), 1000);
++  }
++  const source = showSelected ? selected : results;
++  const shown = source.filter(v => filter === "all" || (v.duration !== null && (filter === "short" ? v.duration < 240 : filter === "medium" ? v.duration >= 240 && v.duration < 1200 : v.duration >= 1200)));
++  return <section aria-label="Поиск видео" className="space-y-3 text-xs text-fg">
++    <div className="rounded border border-primary/30 p-2"><strong>Найти видео · YouTube</strong><p className="mt-1 text-fg-3">Без подписки и оплаты за поиск.</p></div>
++    <form onSubmit={e => { e.preventDefault(); void search(); }} className="space-y-2">
++      <label className="block">Тема<input aria-label="Тема поиска" className={control} value={query} maxLength={200} disabled={busy} placeholder="Например: GTA VI, интервью, путешествия…" onChange={e => setQuery(e.target.value)} /></label>
++      <label className="block">Сортировка<select aria-label="Сортировка поиска" className={control} value={order} disabled={busy} onChange={e => setOrder(e.target.value as VideoSearchRequest["order"])}><option value="relevance">По соответствию теме</option><option value="date">Сначала новые</option></select></label>
++      <label className="block">Количество<select aria-label="Количество результатов" className={control} value={limit} disabled={busy} onChange={e => setLimit(Number(e.target.value) as VideoSearchRequest["limit"])}>{[10, 25, 50, 100].map(n => <option value={n} key={n}>{n} роликов</option>)}</select></label>
++      <button type="submit" className={`${button} w-full bg-primary/20`} disabled={!api || !query.trim() || busy}>{busy ? "Ищу…" : "Найти видео"}</button>
++    </form>
++    {!api && <p role="alert">Откройте обновлённый OpenReel Astel для поиска.</p>}
++    {busy && <button className={button} onClick={() => { const id = requestId.current; requestId.current = null; setBusy(false); setMessage("Поиск остановлен"); if (id) void api?.cancel(id).catch(() => {}); }}>Остановить поиск</button>}
++    <div className="flex flex-wrap gap-2"><button className={button} aria-pressed={!showSelected} onClick={() => setShowSelected(false)}>Найдено · {results.length}</button><button className={button} aria-pressed={showSelected} onClick={() => setShowSelected(true)}>Подборка · {selected.length}</button></div>
++    <label className="block">Длительность<select aria-label="Фильтр длительности" className={control} value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Любая</option><option value="short">До 4 минут</option><option value="medium">4–20 минут</option><option value="long">От 20 минут</option></select></label>
++    <p className="text-fg-3">Фильтр применяется к найденным роликам.</p>
++    {selected.length > 0 && <div className="flex flex-wrap gap-2"><button className={button} onClick={() => void copy()}>Копировать ссылки</button><button className={button} onClick={download}>Сохранить ссылки</button></div>}
++    {error && <p role="alert" className="text-red-400">{error}</p>}
++    {message && <p role="status" aria-live="polite">{message}</p>}
++    {!showSelected && loadedQuery && <p>«{loadedQuery}» · показано {shown.length} из {results.length}</p>}
++    {!busy && shown.length === 0 && <p className="text-fg-3">{showSelected ? "Подборка пока пуста. Отметьте подходящие ролики в результатах." : loadedQuery ? "Подходящих результатов нет. Уточните тему или измените фильтр." : "Введите тему, чтобы найти ролики."}</p>}
++    <div className="space-y-3">{shown.map(v => <article key={v.id} className="overflow-hidden rounded border border-border">
++      <a href={v.url} target="_blank" rel="noopener noreferrer" aria-label={`Смотреть: ${v.title}`}><img src={v.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer" crossOrigin="anonymous" className="aspect-video w-full object-cover" /></a>
++      <div className="space-y-2 p-2"><a href={v.url} target="_blank" rel="noopener noreferrer" className="block font-semibold hover:text-primary" title={v.title}>{v.title}</a><p className="text-fg-3">{v.channel}</p><p className="text-fg-3">{v.live ? "Эфир" : duration(v.duration)}{v.views !== null ? ` · ${new Intl.NumberFormat("ru-RU", { notation: "compact", maximumFractionDigits: 1 }).format(v.views)} просмотров` : ""}</p>
++      <label className="flex items-center gap-2"><input aria-label={`В подборку: ${v.title}`} type="checkbox" checked={selected.some(x => x.id === v.id)} onChange={e => setSelected(old => e.target.checked ? old.some(x => x.id === v.id) ? old : [...old, v].slice(0, 500) : old.filter(x => x.id !== v.id))} />В подборку</label></div>
++    </article>)}</div>
++  </section>;
++}
+diff --git a/apps/web/src/components/editor/inspector/VoiceboxPanel.test.tsx b/apps/web/src/components/editor/inspector/VoiceboxPanel.test.tsx
+new file mode 100644
+index 0000000..0a7cadd
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/VoiceboxPanel.test.tsx
+@@ -0,0 +1,72 @@
++import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
++import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
++import type { VoiceboxBridge, VoiceboxJob, VoiceboxRequest } from "../../../types/global";
++import { VoiceboxPanel } from "./VoiceboxPanel";
++const state = vi.hoisted(() => ({ project: { id: "project-a" } }));
++const add = vi.hoisted(() => vi.fn());
++vi.mock("../../../stores/project-store", () => ({ useProjectStore: (selector: (s: typeof state) => unknown) => selector(state) }));
++vi.mock("./voicebox-timeline", () => ({ addVoiceboxToTimeline: add }));
++let api: VoiceboxBridge;
++const ready: VoiceboxJob = { id: "12345678-1234-4234-8234-123456789abc", profile: "oleh-ru", text: "Привет!", speed: 1, warm: true, project_id: "project-a", status: "ready", duration: 2 };
++beforeEach(() => {
++  localStorage.clear(); state.project.id = "project-a"; add.mockReset().mockResolvedValue(undefined);
++  URL.createObjectURL = vi.fn(() => "blob:voice"); URL.revokeObjectURL = vi.fn();
++  api = {
++    profiles: vi.fn().mockResolvedValue([{ id: "oleh-ru", name: "Олег — русский", language: "ru", warm: true, speed: 1 }, { id: "oleh-en", name: "Oleh — English", language: "en", warm: false, speed: 1.02 }]),
++    submit: vi.fn(async (req: VoiceboxRequest) => ({ ...req, status: "queued" as const })),
++    status: vi.fn().mockResolvedValue(ready), resume: vi.fn().mockResolvedValue(ready),
++    cancel: vi.fn(), audio: vi.fn().mockResolvedValue(new ArrayBuffer(12)),
++  };
++  Object.defineProperty(window, "openreel", { value: { voicebox: api }, configurable: true });
++});
++afterEach(cleanup);
++describe("local speech workflow", () => {
++  it("generates exact text without a cloud key, previews and adds to timeline", async () => {
++    render(<VoiceboxPanel />);
++    await screen.findByRole("option", { name: "Олег — русский" });
++    fireEvent.change(screen.getByLabelText("Текст для озвучки"), { target: { value: "Привет!" } });
++    fireEvent.click(screen.getByRole("button", { name: "Озвучить" }));
++    await screen.findByLabelText("Прослушать озвучку");
++    expect(api.submit).toHaveBeenCalledOnce();
++    expect(api.submit).toHaveBeenCalledWith(expect.objectContaining({ text: "Привет!", profile: "oleh-ru", project_id: "project-a", warm: true }));
++    fireEvent.click(screen.getByRole("button", { name: "Добавить на таймлайн" }));
++    await waitFor(() => expect(add).toHaveBeenCalledOnce());
++    expect(screen.getByRole("link", { name: "Скачать WAV" })).toHaveAttribute("download");
++  });
++  it("restores an existing job after tab remount without generating again", async () => {
++    localStorage.setItem("astel.voicebox.v1", JSON.stringify(ready));
++    const first = render(<VoiceboxPanel />);
++    await screen.findByLabelText("Прослушать озвучку");
++    first.unmount();
++    render(<VoiceboxPanel />);
++    await screen.findByLabelText("Прослушать озвучку");
++    expect(api.resume).toHaveBeenCalledTimes(2);
++    expect(api.submit).not.toHaveBeenCalled();
++    expect(api.cancel).not.toHaveBeenCalled();
++    expect(URL.revokeObjectURL).toHaveBeenCalled();
++  });
++  it("prevents adding to a different project", async () => {
++    localStorage.setItem("astel.voicebox.v1", JSON.stringify(ready));
++    state.project.id = "project-b";
++    render(<VoiceboxPanel />);
++    await screen.findByLabelText("Прослушать озвучку");
++    expect(screen.getByRole("button", { name: "Добавить на таймлайн" })).toBeDisabled();
++    expect(add).not.toHaveBeenCalled();
++  });
++  it("uses the English reference and accepted long-form tempo", async () => {
++    render(<VoiceboxPanel />);
++    await screen.findByRole("option", { name: "Oleh — English" });
++    fireEvent.change(screen.getByLabelText("Голос"), { target: { value: "oleh-en" } });
++    fireEvent.change(screen.getByLabelText("Текст для озвучки"), { target: { value: "Hello, my friend!" } });
++    fireEvent.click(screen.getByRole("button", { name: "Озвучить" }));
++    await waitFor(() => expect(api.submit).toHaveBeenCalledWith(expect.objectContaining({ profile: "oleh-en", speed: 1.02, warm: false })));
++  });
++  it("can reconnect an uncertain submission using the same saved request", async () => {
++    const req = { ...ready, status: undefined };
++    localStorage.setItem("astel.voicebox.v1", JSON.stringify({ ...req, request: req }));
++    vi.mocked(api.resume).mockRejectedValue(new Error("offline"));
++    render(<VoiceboxPanel />);
++    fireEvent.click(await screen.findByRole("button", { name: "Повторить подключение" }));
++    await waitFor(() => expect(api.submit).toHaveBeenCalledWith(req));
++  });
++});
+diff --git a/apps/web/src/components/editor/inspector/VoiceboxPanel.tsx b/apps/web/src/components/editor/inspector/VoiceboxPanel.tsx
+new file mode 100644
+index 0000000..f5369a0
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/VoiceboxPanel.tsx
+@@ -0,0 +1,165 @@
++import { useEffect, useRef, useState } from "react";
++import type { VoiceboxJob, VoiceboxProfile, VoiceboxRequest } from "../../../types/global";
++import { useProjectStore } from "../../../stores/project-store";
++import { addVoiceboxToTimeline } from "./voicebox-timeline";
++
++const KEY = "astel.voicebox.v1";
++const finished = (job: VoiceboxJob) => ["ready", "failed", "cancelled"].includes(job.status);
++const labels: Record<VoiceboxJob["status"], string> = {
++  queued: "В очереди…", starting: "Запускаю Voicebox…", generating: "Генерирую голос…",
++  processing: "Настраиваю темп и звук…", cancelling: "Останавливаю…", ready: "Озвучка готова",
++  failed: "Не удалось завершить озвучку", cancelled: "Генерация остановлена",
++};
++const control = "w-full rounded border border-border bg-panel p-2 text-fg";
++const button = "rounded border border-border px-3 py-2 text-xs disabled:opacity-40 hover:bg-white/10";
++function saved(): Partial<VoiceboxRequest> & { request?: VoiceboxRequest } {
++  try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
++}
++
++export function VoiceboxPanel() {
++  const api = window.openreel?.voicebox;
++  const projectId = useProjectStore(s => s.project.id);
++  const [initial] = useState(saved);
++  const [text, setText] = useState(initial.text || "");
++  const [profile, setProfile] = useState(initial.profile || "oleh-ru");
++  const [speed, setSpeed] = useState(initial.speed || 1);
++  const [warm, setWarm] = useState(initial.warm ?? true);
++  const [profiles, setProfiles] = useState<VoiceboxProfile[]>([]);
++  const [pending, setPending] = useState<VoiceboxRequest | undefined>(initial.request);
++  const [job, setJob] = useState<VoiceboxJob | null>(null);
++  const [jobId, setJobId] = useState(initial.id || "");
++  const [error, setError] = useState("");
++  const [message, setMessage] = useState("");
++  const [submitting, setSubmitting] = useState(false);
++  const [adding, setAdding] = useState(false);
++  const [audio, setAudio] = useState<{ id: string; blob: Blob; url: string } | null>(null);
++  const alive = useRef(true);
++  const submittingRef = useRef(false);
++  const active = submitting || Boolean(job && !finished(job));
++
++  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
++  useEffect(() => {
++    let cancelled = false;
++    api?.profiles().then(p => { if (!cancelled) setProfiles(p); }).catch(() => {
++      if (!cancelled) setError("Не найдены локальные голоса. Проверьте установку Voicebox.");
++    });
++    return () => { cancelled = true; };
++  }, [api]);
++  useEffect(() => {
++    localStorage.setItem(KEY, JSON.stringify({ id: jobId, text, profile, speed, warm, request: pending }));
++  }, [jobId, text, profile, speed, warm, pending]);
++
++  useEffect(() => {
++    if (!api || !jobId) return;
++    let cancelled = false;
++    let timer: ReturnType<typeof setTimeout>;
++    const poll = async (resume: boolean) => {
++      try {
++        const next = await (resume ? api.resume(jobId) : api.status(jobId));
++        if (cancelled) return;
++        setJob(next);
++        setError("");
++        if (!finished(next)) timer = setTimeout(() => void poll(false), 1500);
++      } catch {
++        if (!cancelled) {
++          setError("Не удалось проверить озвучку. Задание сохранено; проверю ещё раз.");
++          timer = setTimeout(() => void poll(false), 5000);
++        }
++      }
++    };
++    void poll(true);
++    return () => { cancelled = true; clearTimeout(timer); };
++  }, [api, jobId]);
++
++  useEffect(() => {
++    if (!api || job?.status !== "ready") { setAudio(null); return; }
++    let cancelled = false;
++    let url: string | undefined;
++    api.audio(job.id).then(bytes => {
++      if (cancelled) return;
++      const blob = new Blob([bytes], { type: "audio/wav" });
++      url = URL.createObjectURL(blob);
++      setAudio({ id: job.id, blob, url });
++    }).catch(() => { if (!cancelled) setError("Не удалось открыть WAV. Файл сохранён в Voicebox."); });
++    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
++  }, [api, job?.id, job?.status]);
++
++  async function generate() {
++    if (!api || submittingRef.current || active || !text.trim()) return;
++    submittingRef.current = true;
++    setSubmitting(true); setError(""); setMessage("");
++    const request = { id: crypto.randomUUID(), profile, text: text.trim(), speed, warm: profile === "oleh-ru" && warm, project_id: projectId };
++    // Save the ID before IPC. Reopening checks this same job and never re-submits it.
++    localStorage.setItem(KEY, JSON.stringify({ ...request, request }));
++    setPending(request); setJob(null); setJobId(request.id);
++    try {
++      const next = await api.submit(request);
++      if (alive.current) { setJob(next); setJobId(next.id); }
++    } catch {
++      if (alive.current) {
++        setJobId(request.id);
++        setError("Не удалось получить ответ. Проверяю сохранённое задание.");
++      }
++    } finally {
++      submittingRef.current = false;
++      if (alive.current) setSubmitting(false);
++    }
++  }
++  async function add() {
++    if (!audio || !job || adding) return;
++    setAdding(true); setError("");
++    try {
++      await addVoiceboxToTimeline(job, audio.blob);
++      if (alive.current) setMessage("Добавлено на новую аудиодорожку в конец таймлайна.");
++    } catch (e) {
++      if (alive.current) setError(e instanceof Error ? e.message : "Не удалось добавить озвучку.");
++    } finally { if (alive.current) setAdding(false); }
++  }
++  const restoring = Boolean(jobId && !job);
++  const readyAudio = audio && audio.id === job?.id ? audio : null;
++  return <section aria-label="Voicebox" className="space-y-3 text-xs text-fg">
++    <div className="rounded border border-primary/30 p-3">
++      <strong>Voicebox · голос Олега</strong>
++      <p className="mt-1 text-fg-3">На этом Mac. Результат сохранится автоматически.</p>
++    </div>
++    {!api && <p role="alert">Откройте OpenReel Astel для локальной озвучки.</p>}
++    <label className="block">Голос
++      <select aria-label="Голос" className={control} value={profile} disabled={active || restoring} onChange={e => {
++        const p = profiles.find(p => p.id === e.target.value);
++        if (p) { setProfile(p.id); setSpeed(p.speed); setWarm(p.warm); }
++      }}>
++        {profiles.length ? profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>) : <option value={profile}>Загрузка голосов…</option>}
++      </select>
++    </label>
++    <label className="block">Текст для озвучки
++      <textarea aria-label="Текст для озвучки" className={`${control} mt-1 resize-y`} rows={4} value={text} maxLength={5000} disabled={active || restoring} placeholder="Вставьте текст на выбранном языке…" onChange={e => setText(e.target.value)} />
++    </label>
++    <div className="flex items-center justify-between gap-2">
++      <label>Темп <select aria-label="Темп" className="rounded border border-border bg-panel p-1" value={speed} disabled={active || restoring} onChange={e => setSpeed(Number(e.target.value))}>
++        {[0.85, 0.95, 1, 1.02, 1.1, 1.2, 1.3, 1.5].map(n => <option key={n} value={n}>{Math.round(n * 100)}%</option>)}
++      </select></label><span className="text-fg-3">{text.length}/5000</span>
++    </div>
++    {profile === "oleh-ru" && <label className="flex items-center gap-2"><input type="checkbox" checked={warm} disabled={active || restoring} onChange={e => setWarm(e.target.checked)} />Тёплый звук B</label>}
++    <button className={`${button} w-full bg-primary/20`} disabled={!api || !profiles.length || !text.trim() || active || restoring || adding} onClick={() => void generate()}>{active ? "Озвучиваю…" : "Озвучить"}</button>
++    {(active || restoring) && <p className="text-fg-3">Первый запуск загружает модель. Генерация может занять несколько минут.</p>}
++    {job && <div role="status" aria-live="polite" className="space-y-2 rounded border border-border p-2">
++      <p>{labels[job.status]}{job.duration ? ` · ${job.duration.toFixed(1)} с` : ""}</p>
++      {!finished(job) && <button className={button} disabled={job.status === "cancelling"} onClick={() => void api?.cancel(job.id).then(setJob).catch(() => setError("Не удалось остановить задание. Повторите попытку."))}>Остановить</button>}
++      {job.error && <p>{job.error}</p>}
++    </div>}
++    {readyAudio && <div className="space-y-2">
++      <audio aria-label="Прослушать озвучку" controls src={readyAudio.url} className="w-full" />
++      <a className={`${button} inline-block`} href={readyAudio.url} download={`Oleh-${job!.profile}-${job!.id.slice(0, 8)}.wav`}>Скачать WAV</a>
++      <button className={`${button} w-full`} disabled={adding || job?.project_id !== projectId} onClick={() => void add()}>{adding ? "Добавляю…" : "Добавить на таймлайн"}</button>
++      {job?.project_id !== projectId && <p>Вернитесь в проект, в котором создана эта озвучка, чтобы добавить её на таймлайн.</p>}
++    </div>}
++    {error && <p role="alert" className="text-red-400">{error}</p>}
++    {error && restoring && pending && <button className={button} disabled={submitting} onClick={() => {
++      setSubmitting(true);
++      void api?.submit(pending).then(next => { if (alive.current) { setJob(next); setError(""); } }).catch(() => {
++        if (alive.current) setError("Voicebox пока недоступен. Проверьте локальную установку.");
++      }).finally(() => { if (alive.current) setSubmitting(false); });
++    }}>Повторить подключение</button>}
++    {message && <p role="status" className="text-green-400">{message}</p>}
++  </section>;
++}
+diff --git a/apps/web/src/components/editor/inspector/voicebox-timeline.test.ts b/apps/web/src/components/editor/inspector/voicebox-timeline.test.ts
+new file mode 100644
+index 0000000..f3971aa
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/voicebox-timeline.test.ts
+@@ -0,0 +1,56 @@
++import { beforeEach, describe, expect, it, vi } from "vitest";
++import type { VoiceboxJob } from "../../../types/global";
++import { addVoiceboxToTimeline } from "./voicebox-timeline";
++const mock = vi.hoisted(() => ({ state: {} as any, set: vi.fn(), scratch: {} as any }));
++vi.mock("../../../stores/project-store", () => ({ useProjectStore: { getState: () => mock.state, setState: mock.set } }));
++vi.mock("@openreel/core", () => ({ ActionExecutor: class {
++  execute = (...args: unknown[]) => mock.scratch.execute(...args);
++  getHistory = () => ({ getHistoryEntries: () => [] });
++} }));
++const job: VoiceboxJob = { id: "job-1", project_id: "a", profile: "oleh-ru", text: "Привет", speed: 1, warm: true, status: "ready" };
++beforeEach(() => {
++  mock.set.mockReset();
++  mock.scratch = { execute: vi.fn().mockResolvedValue({ success: true }) };
++  mock.state = {
++    project: { id: "a", mediaLibrary: { items: [] }, timeline: { tracks: [{ id: "video", clips: [{ startTime: 3, duration: 4 }] }] } },
++    importMedia: vi.fn().mockResolvedValue({ success: true, actionId: "media-1" }),
++    actionExecutor: { getHistory: vi.fn(() => ({ beginGroup: vi.fn(), endGroup: vi.fn(), push: vi.fn() })) },
++  };
++});
++describe("speech timeline import", () => {
++  it("imports a WAV, creates an audio track and appends after existing clips", async () => {
++    await addVoiceboxToTimeline(job, new Blob(["wav"]));
++    expect(mock.state.importMedia).toHaveBeenCalledOnce();
++    expect(mock.scratch.execute).toHaveBeenNthCalledWith(2, expect.objectContaining({ type: "clip/add", params: expect.objectContaining({ mediaId: "media-1", startTime: 7 }) }), expect.anything());
++    expect(mock.set).toHaveBeenCalledOnce();
++  });
++  it("refuses a wrong project before importing", async () => {
++    mock.state.project.id = "b";
++    await expect(addVoiceboxToTimeline(job, new Blob())).rejects.toThrow("Откройте проект");
++    expect(mock.state.importMedia).not.toHaveBeenCalled();
++  });
++  it("refuses a project switch during decoding", async () => {
++    mock.state.importMedia.mockImplementation(async () => {
++      mock.state.project = { ...mock.state.project, id: "b" };
++      return { success: true, actionId: "media-1" };
++    });
++    await expect(addVoiceboxToTimeline(job, new Blob())).rejects.toThrow("Откройте проект");
++    expect(mock.scratch.execute).not.toHaveBeenCalled();
++    expect(mock.set).not.toHaveBeenCalled();
++    expect(mock.state.actionExecutor.getHistory).not.toHaveBeenCalled();
++  });
++  it("refuses to overwrite manual edits made during track creation", async () => {
++    mock.scratch.execute.mockImplementation(async () => {
++      mock.state.project = { ...mock.state.project, modifiedAt: 123 };
++      return { success: true };
++    });
++    await expect(addVoiceboxToTimeline(job, new Blob())).rejects.toThrow("Проект изменился");
++    expect(mock.set).not.toHaveBeenCalled();
++    expect(mock.state.actionExecutor.getHistory).not.toHaveBeenCalled();
++  });
++  it("reuses the same imported media on another add", async () => {
++    mock.state.project.mediaLibrary.items = [{ id: "media-existing", name: "Voicebox-oleh-ru-job-1.wav" }];
++    await addVoiceboxToTimeline(job, new Blob());
++    expect(mock.state.importMedia).not.toHaveBeenCalled();
++  });
++});
+diff --git a/apps/web/src/components/editor/inspector/voicebox-timeline.ts b/apps/web/src/components/editor/inspector/voicebox-timeline.ts
+new file mode 100644
+index 0000000..fa7d131
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/voicebox-timeline.ts
+@@ -0,0 +1,40 @@
++import { v4 as uuid } from "uuid";
++import { ActionExecutor } from "@openreel/core";
++import type { VoiceboxJob } from "../../../types/global";
++import { useProjectStore } from "../../../stores/project-store";
++import { cloneProjectForEdit } from "../../../stores/project/clone-project-for-edit";
++
++export async function addVoiceboxToTimeline(job: VoiceboxJob, blob: Blob): Promise<void> {
++  const store = useProjectStore;
++  const check = () => {
++    if (store.getState().project.id !== job.project_id) throw new Error("Откройте проект, в котором была создана озвучка.");
++  };
++  check();
++  if (job.status !== "ready") throw new Error("Озвучка ещё не готова.");
++  const fileName = `Voicebox-${job.profile}-${job.id}.wav`;
++  let mediaId = store.getState().project.mediaLibrary.items.find(m => m.name === fileName)?.id;
++  if (!mediaId) {
++    const result = await store.getState().importMedia(new File([blob], fileName, { type: "audio/wav" }));
++    check();
++    if (!result.success || !result.actionId) throw new Error("Не удалось импортировать WAV. Скачайте файл и попробуйте снова.");
++    mediaId = result.actionId;
++  }
++  const { project, actionExecutor } = store.getState();
++  const copy = cloneProjectForEdit(project);
++  const scratch = new ActionExecutor();
++  const trackId = uuid();
++  const startTime = Math.max(0, ...copy.timeline.tracks.flatMap(t => t.clips.map(c => c.startTime + c.duration)));
++  // Work on a copy; refuse to overwrite a project changed during async actions.
++  const track = await scratch.execute({ type: "track/add", id: uuid(), timestamp: Date.now(), params: { trackType: "audio", trackId } }, copy);
++  if (!track.success) throw new Error("Не удалось создать аудиодорожку.");
++  const clip = await scratch.execute({ type: "clip/add", id: uuid(), timestamp: Date.now(), params: { trackId, mediaId, startTime } }, copy);
++  check();
++  if (store.getState().project !== project) throw new Error("Проект изменился. Озвучка сохранена в медиа; нажмите добавить ещё раз.");
++  if (!clip.success) throw new Error("Не удалось добавить аудиоклип.");
++  const history = actionExecutor.getHistory();
++  history.beginGroup("Add Voicebox narration");
++  try {
++    for (const entry of scratch.getHistory().getHistoryEntries()) history.push(entry.action, entry.inverseAction);
++  } finally { history.endGroup(); }
++  store.setState({ project: { ...copy, modifiedAt: Date.now() } });
++}
+diff --git a/apps/web/src/types/global.d.ts b/apps/web/src/types/global.d.ts
+index a968c2c..fd9e9fa 100644
+--- a/apps/web/src/types/global.d.ts
++++ b/apps/web/src/types/global.d.ts
+@@ -170,10 +170,47 @@ export type OpenReelUpdaterStatus =
+   | { state: "downloaded"; version: string }
+   | { state: "error"; message: string };
+ 
++export interface VoiceboxProfile {
++  id: string; name: string; language: "ru" | "en"; warm: boolean; speed: number;
++}
++export interface VoiceboxRequest {
++  id: string; profile: string; text: string; speed: number; warm: boolean; project_id: string;
++}
++export interface VoiceboxJob extends VoiceboxRequest {
++  status: "queued" | "starting" | "generating" | "cancelling" | "processing" | "ready" | "failed" | "cancelled";
++  duration?: number; error?: string;
++}
++export interface VoiceboxBridge {
++  profiles(): Promise<VoiceboxProfile[]>;
++  submit(request: VoiceboxRequest): Promise<VoiceboxJob>;
++  status(id: string): Promise<VoiceboxJob>;
++  resume(id: string): Promise<VoiceboxJob>;
++  cancel(id: string): Promise<VoiceboxJob>;
++  audio(id: string): Promise<ArrayBuffer>;
++}
++
++export interface VideoSearchItem {
++  id: string; title: string; channel: string; duration: number | null;
++  views: number | null; url: string; thumbnail: string; live: boolean;
++}
++export interface VideoSearchRequest {
++  id: string; query: string; limit: 10 | 25 | 50 | 100; order: "relevance" | "date";
++}
++export type VideoSearchResponse = {
++  ok: true; query: string; limit: number; order: string; results: VideoSearchItem[];
++  from_cache: boolean; fetched_at: string;
++} | { ok: false; code: string; message: string };
++export interface VideoSearchBridge {
++  query(request: VideoSearchRequest): Promise<VideoSearchResponse>;
++  cancel(id: string): Promise<void>;
++}
++
+ declare global {
+   interface Window {
+     openreel?: {
+       platform: "desktop";
++      voicebox?: VoiceboxBridge;
++      videoSearch?: VideoSearchBridge;
+       publicOrigin: string;
+       probeHardware(): Promise<OpenReelHardwareInfo>;
+       onMenuAction(cb: (id: string) => void): () => void;

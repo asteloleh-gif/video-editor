@@ -1,2 +1,3 @@
 # Unified patches encode an empty context line as a single space.
 integration/voicebox/patches/*.patch whitespace=-blank-at-eol
+integration/video-search/*.patch whitespace=-blank-at-eol
