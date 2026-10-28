@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-28",
+  "composition": "AstelStoryPilot-3D",
+  "source_commit": "9589ee7852787ccbbde813b103b5dad74efec194",
+  "checkpoint_tag": "checkpoint/amazon-pilot-v2-2026-10-28",
+  "status": "frozen as a test pilot; content and voice iterations paused by owner",
+  "owner_review": {
+    "overall": "Useful test pilot; 3D made the video more interesting",
+    "duration": "Feels rather long; no replacement target duration specified",
+    "voice_identity": "Owner recognizes himself; wife reports partial but incomplete similarity",
+    "voice_diction": "Clearer articulation desired, especially for narration without the owner on screen",
+    "voice_pacing": "Perceived slowing at some phrase endings followed by an abrupt or fast transition into the next phrase",
+    "reference_context": "Owner says the original reference reading was informal and not performed with particular care",
+    "exact_problem_timecodes": "Not marked or inferred",
+    "production_or_publication_approval": false
+  },
+  "deferred_voice_questions": [
+    "Compare identity fidelity and diction separately",
+    "Revisit reference performance and exact transcript; no reference-quality diagnosis has been verified",
+    "Review phrase endings, emphasis and transitions; avoid treating the whole issue as global playback speed"
+  ],
+  "priority": "Finish infrastructure before further pilot polishing; concrete infrastructure scope not established in this checkpoint",
+  "actions_now": "Save feedback, source/media snapshot and local Git checkpoint only",
+  "new_synthesis_or_editing_authorized_by_this_review": false,
+  "archive": {
+    "filename": "Amazon-v2-9589ee7-local-snapshot.zip",
+    "bytes": 67646995,
+    "sha256": "96db643ccb7b9d8085b55a6bfae04c8cb3115626a1ec89a1db177b5fa65b7d06",
+    "files": 29,
+    "crc_check": "passed",
+    "contents": "Render source, pinned dependency manifests, exact props/captions, generated narration and four reviewed media originals; no credentials or private clone reference"
+  },
+  "preserved": {
+    "original_v1_mp4_sha256": "85d872aee8e3b28fdd8303be87b384c46ed53b178910125f427fdbfbe1e68480",
+    "v2_source_and_audio": "frozen in local snapshot",
+    "full_v2_mp4_export": false
+  },
+  "publishing_changed": false
+}

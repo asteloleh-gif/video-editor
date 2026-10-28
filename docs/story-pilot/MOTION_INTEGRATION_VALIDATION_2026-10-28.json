@@ -1,7 +1,7 @@
 {
   "date": "2026-10-28",
   "composition": "AstelStoryPilot-3D",
-  "status": "implemented; sampled frame rendering and unmuted Studio preview verified; owner review pending",
+  "status": "frozen as a test pilot; content and voice iterations paused by owner",
   "owner_style_choice": "3D selected from AmazonMotion-Compare",
   "checks": {
     "typecheck": "passed",
@@ -160,5 +160,16 @@
     "Sampled still rendering and active unmuted playback; independent listening not performed",
     "Phrase captions retained; no word-level forced alignment",
     "No full MP4 encode or native layered OpenReel handoff in this revision"
-  ]
+  ],
+  "owner_review": {
+    "overall": "Useful test pilot; 3D made the video more interesting",
+    "duration": "Feels rather long; no replacement target duration specified",
+    "voice_identity": "Owner recognizes himself; wife reports partial but incomplete similarity",
+    "voice_diction": "Clearer articulation desired, especially for narration without the owner on screen",
+    "voice_pacing": "Perceived slowing at some phrase endings followed by an abrupt or fast transition into the next phrase",
+    "reference_context": "Owner says the original reference reading was informal and not performed with particular care",
+    "exact_problem_timecodes": "Not marked or inferred",
+    "production_or_publication_approval": false
+  },
+  "checkpoint": "PILOT_CHECKPOINT_2026-10-28.json"
 }

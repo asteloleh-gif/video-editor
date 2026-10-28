@@ -2,6 +2,12 @@
 
 28 October 2026. Local review only; no Hub submission or publishing configuration changes.
 
+## Current checkpoint: frozen test pilot
+
+The owner reviewed version 2 and asked to preserve it, pause content/voice iterations, and prioritize finishing infrastructure. The 3D motion made the story more interesting; the approximately 62-second video feels rather long. Voice work is deferred: the owner recognizes himself, but his wife reports incomplete similarity; clearer diction is wanted for narration without him on screen. Some phrase endings feel slow and the transition into the next phrase feels abrupt or fast. No exact problem timecodes or target replacement duration were supplied. The owner also notes that the original reference reading was informal and not carefully performed; its contribution to the result is a question for a later comparison, not a verified diagnosis.
+
+`PILOT_CHECKPOINT_2026-10-28.json` records this decision and the source revision. A private local ZIP preserves the exact render source, dependency manifests, media, narration, props and captions. The original MP4 is unchanged; version 2 remains an editable preview rather than an exported MP4. No new synthesis, edit, model installation, infrastructure mutation or publishing operation is part of this checkpoint. Resume pilot polishing only on a new owner request; the infrastructure work needs its own concrete scope.
+
 ## Delivered
 
 A Russian vertical story, 1080×1920 / 30 fps / H.264 + AAC, approximately 62 seconds. The owner's approved Russian Voicebox profile uses its existing 100% tempo and warm preset B. Narration is 59.243 seconds, followed by source credits.
@@ -96,7 +102,7 @@ npm run typecheck
 npm run verify:motion -- ../output/motion-study
 ```
 
-The check uses headless Chrome/ANGLE, renders the three comparison phases and both portraits, and verifies exact PNG equality when returning to an earlier frame. This is sampled render QA, not a full video encode or a cross-machine reproducibility guarantee. The user still chooses the preferred style. Existing pilot MP4 bytes and all other compositions are preserved. Validation, including the existing dependency audit findings, is in `MOTION_STUDY_VALIDATION_2026-10-28.json`.
+The check uses headless Chrome/ANGLE, renders the three comparison phases and both portraits, and verifies exact PNG equality when returning to an earlier frame. This is sampled render QA, not a full video encode or a cross-machine reproducibility guarantee. The owner subsequently selected the 3D style. Existing pilot MP4 bytes and all other compositions are preserved. Validation, including the existing dependency audit findings, is in `MOTION_STUDY_VALIDATION_2026-10-28.json`.
 
 ## Version 2: selected 3D integrated with the original story
 
