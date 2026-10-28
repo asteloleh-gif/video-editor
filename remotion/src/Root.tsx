@@ -2,6 +2,7 @@ import React from 'react';
 import {Composition} from 'remotion';
 import {AstelFamShort} from './AstelFamShort';
 import {StoryPilotRegistration} from './StoryPilot';
+import {MotionStudyRegistration} from './MotionStudy';
 import {BattleBoxShort, ShortProps} from './Short';
 
 const defaultProps: ShortProps = {
@@ -47,6 +48,7 @@ const astelFamDefaultProps: ShortProps = {
 export const Root: React.FC = () => {
   return (
     <>
+      <MotionStudyRegistration/>
       <StoryPilotRegistration/>
       <Composition
         id="BattleBoxShort"

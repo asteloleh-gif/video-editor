@@ -81,3 +81,19 @@ The main visual limitation is coverage: only 16 of 59.24 narration seconds use s
 Voice measures 132.7 words/minute, with no detected silence longer than 0.47 seconds at the stated threshold. That does not measure expressiveness or speaker similarity. First compare phrasing, entity pronunciation and the existing warm EQ using controlled short samples; do not accelerate the whole voice by default. The current MLX Base clone rejects delivery instructions. Qwen's 1.7B Base is a candidate for an isolated comparison, not an installed or proven improvement on this M1/16 GiB Mac. The final MP4 measures -19.1 LUFS integrated and -4.5 dBTP, with no clipping detected; final mix loudness is a separate comparison from changing the global Voicebox profile.
 
 Keep Voicebox, OpenReel, FFmpeg and Remotion. Evaluate the existing whisper.cpp token timings before adding another alignment engine; WhisperX is conditional on measured caption drift. PySceneDetect can split source shots, and a later SigLIP 2 frame/text index can rank candidate imagery, but neither is integrated or validated by this pilot. These source-processing additions cannot supply missing historical footage. Native OpenReel scene/track handoff is still needed for a practical manual correction loop: the current OpenReel project contains one flattened MP4.
+
+## Motion study: 2D versus 3D
+
+The separate `Motion-Lab` folder contains a 12-second visual comparison: book → parcel → server network. `AmazonMotion-Compare` shows both versions together at 1920×1080; `AmazonMotion-2D` and `AmazonMotion-3D` show 1080×1920 versions. `AmazonMotion-Panel` is the connected reusable graphic scene. There is no new narration, music, video export or OpenReel project mutation in this experiment.
+
+The two versions share one frame-based transformation timeline in `remotion/src/motion-study/timing.ts`. SVG draws version A; Three.js through `@remotion/three` draws version B. The study uses authored primitive geometry, local fonts and no external model/texture downloads. Pinning the adapter to 4.0.529 preserves the installed Remotion version. This version uses explicit named `Sequence` nodes and its installed schema API rather than assuming newer skill examples work unchanged.
+
+Run Studio as above, then select `AmazonMotion-Compare`. For inspection frames and an out-of-order repeat-frame check:
+
+```bash
+cd remotion
+npm run typecheck
+npm run verify:motion -- ../output/motion-study
+```
+
+The check uses headless Chrome/ANGLE, renders the three comparison phases and both portraits, and verifies exact PNG equality when returning to an earlier frame. This is sampled render QA, not a full video encode or a cross-machine reproducibility guarantee. The user still chooses the preferred style. Existing pilot MP4 bytes and all other compositions are preserved. Validation, including the existing dependency audit findings, is in `MOTION_STUDY_VALIDATION_2026-10-28.json`.

@@ -1,0 +1,144 @@
+{
+  "date": "2026-10-28",
+  "status": "implemented; sampled render QA passed; owner style choice pending",
+  "compositions": [
+    "AmazonMotion-Compare",
+    "AmazonMotion-2D",
+    "AmazonMotion-3D",
+    "AmazonMotion-Panel"
+  ],
+  "duration_seconds": 12,
+  "fps": 30,
+  "variants": [
+    "2D SVG",
+    "Three.js / React Three Fiber"
+  ],
+  "dependencies_added": {
+    "@remotion/three": "4.0.529",
+    "@react-three/fiber": "9.4.0",
+    "three": "0.182.0",
+    "@types/three": "0.182.0"
+  },
+  "checks": {
+    "typecheck": "passed",
+    "render": {
+      "mode": "still_render_QA_no_video_export",
+      "renderer": "angle",
+      "results": [
+        {
+          "composition": "AmazonMotion-Compare",
+          "frame": 60,
+          "name": "book",
+          "sha256": "8b61d3364a54539c795515814c774299c71fa12daddb23384a6387ceddf06c82",
+          "render_ms": 560
+        },
+        {
+          "composition": "AmazonMotion-Compare",
+          "frame": 165,
+          "name": "box",
+          "sha256": "a565c2da83f25cdcf0a565c6743f0407c7e538cff973b368a2036c2a97cbd01f",
+          "render_ms": 491
+        },
+        {
+          "composition": "AmazonMotion-Compare",
+          "frame": 315,
+          "name": "server",
+          "sha256": "749e24dc69a6a6935b8b351af1bfd2fa15cdcd8a8f4b310706a945b36cf9fb49",
+          "render_ms": 454
+        },
+        {
+          "composition": "AmazonMotion-Compare",
+          "frame": 60,
+          "name": "book-repeat",
+          "sha256": "8b61d3364a54539c795515814c774299c71fa12daddb23384a6387ceddf06c82",
+          "render_ms": 462
+        },
+        {
+          "composition": "AmazonMotion-2D",
+          "frame": 315,
+          "name": "portrait-2d",
+          "sha256": "9bae001a08a900db2ef468d07b2d884b9050f12fe03f320b39c45bb1fb77f988",
+          "render_ms": 335
+        },
+        {
+          "composition": "AmazonMotion-3D",
+          "frame": 315,
+          "name": "portrait-3d",
+          "sha256": "cd1fc0a5085b4448416e2a0c60cf05a48938ea019cab7b44aa2b8427d1a42ef9",
+          "render_ms": 452
+        }
+      ],
+      "repeat_matches": true
+    },
+    "studio": "comparison and portrait visible; playback advanced; portrait title reflow corrected",
+    "prior_pilot_sha256_unchanged": "85d872aee8e3b28fdd8303be87b384c46ed53b178910125f427fdbfbe1e68480"
+  },
+  "dependency_audit": {
+    "findings": {
+      "moderate": 1,
+      "high": 8
+    },
+    "reported_packages": [
+      {
+        "package": "@remotion/bundler",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/cli",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/codemods",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/media",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/studio",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/studio-protocol",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "@remotion/studio-server",
+        "before": "4.0.529",
+        "after": "4.0.529"
+      },
+      {
+        "package": "fast-uri",
+        "before": "3.1.8",
+        "after": "3.1.8"
+      },
+      {
+        "package": "zod",
+        "before": "4.5.4",
+        "after": "4.5.4"
+      }
+    ],
+    "all_already_present_at_same_versions": true,
+    "automatic_fix_applied": false
+  },
+  "scope": {
+    "new_audio": false,
+    "video_export": false,
+    "source_media_downloads": false,
+    "paid_api_calls": false,
+    "native_openreel_mutations": false,
+    "production_publishing_changed": false
+  },
+  "limits": [
+    "Sampled still rendering, not complete video encoding or performance benchmarking",
+    "Exact PNG repeat verified in this runtime; cross-machine GPU equality not claimed",
+    "No automatic source selection or full pilot re-edit"
+  ]
+}
