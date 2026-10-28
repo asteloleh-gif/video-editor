@@ -366,5 +366,62 @@
         }
       }
     }
+  },
+  "openreel_native_ui": {
+    "implemented": true,
+    "app": "~/Applications/OpenReel Astel.app",
+    "upstream_preserved": true,
+    "patch_sha256": "ffde3956a9bf0dc103553400b47d7273d1942f9e88640cc3f5ab2315b5decf4b",
+    "typecheck": {
+      "web": "passed",
+      "desktop": "passed"
+    },
+    "build": {
+      "renderer": "passed",
+      "main": "passed"
+    },
+    "tests": {
+      "python_adapter_and_jobs": 30,
+      "desktop_passed": 141,
+      "desktop_skipped": 7,
+      "web_voicebox_and_media_passed": 16
+    },
+    "installed_app_smokes": [
+      {
+        "id": "350d59d2-328f-481a-aef4-5960f68c82e3",
+        "profile": "oleh-ru",
+        "status": "ready",
+        "speed": 1,
+        "warm": true,
+        "duration": 6.16,
+        "audio_sha256": "6bc8bd0e741c8cdae4f9aff53076f38fb8c4673aca815d28da7a3087cc29e565",
+        "created_at": "2026-10-28T00:38:07.006118+00:00",
+        "updated_at": "2026-10-28T00:38:57.135498+00:00"
+      },
+      {
+        "id": "dbf8c245-3cd3-4f37-94a9-9d9613db55ed",
+        "profile": "oleh-en",
+        "status": "ready",
+        "speed": 1.02,
+        "warm": false,
+        "duration": 7.616,
+        "audio_sha256": "4ff6021d3f399858b04b94dd3dc33ee1f64e800a4188be8a15a0d811ce602c99",
+        "created_at": "2026-10-28T00:39:24.739338+00:00",
+        "updated_at": "2026-10-28T00:40:50.058346+00:00"
+      }
+    ],
+    "native_preview_playback": "both: readyState=4, paused=false, muted=false",
+    "download_sha256_matches": true,
+    "tab_switch_during_generation": true,
+    "on_demand_service_start": true,
+    "app_restart_restores_job_and_project": true,
+    "timeline_audio_clips": 2,
+    "single_undo_then_redo_clip_counts": [
+      1,
+      2
+    ],
+    "new_smoke_human_voice_quality_review": "pending",
+    "full_video_export_tested_in_this_change": false,
+    "publishing_changes": false
   }
 }

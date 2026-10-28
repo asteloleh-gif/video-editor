@@ -1,8 +1,8 @@
 {
   "date": "2026-10-27",
   "decision": "Extend native OpenReel Text to Speech with local Voicebox provider and persistent Astel narration orchestration",
-  "status": "architecture_selected_for_next_implementation",
-  "implementation_status": "not_implemented_in_OpenReel",
+  "status": "native_text_to_speech_implemented_in_isolated_candidate",
+  "implementation_status": "paste_text_generate_preview_download_timeline; broader narrated assembly remains planned",
   "branch": "integration/voicebox-local-first",
   "reviewed_source": {
     "openreel_pinned": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
@@ -161,5 +161,14 @@
     "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/workers/whisper-worker.ts",
     "https://github.com/Augani/openreel-video/blob/367d7e90b61b5181f9861b852bb8b9d7a7d2954a/apps/web/src/stores/settings-store.ts",
     "https://github.com/jamiepine/voicebox/tree/8af7efe62fab8d33e2a5dfbedabaa45f68a5184f"
-  ]
+  ],
+  "implemented_scope": [
+    "Local approved RU/EN voice profiles without cloud key",
+    "Typed path-free desktop IPC and pinned required-clone runtime",
+    "Durable background job, exact retry idempotency and resume by generation ID",
+    "Versioned raw and processed WAV with hash checks",
+    "Preview/download and project-guarded timeline import",
+    "Separate candidate app, user data and MCP descriptor; original app preserved"
+  ],
+  "implementation_doc": "OPENREEL_LOCAL_SPEECH.md"
 }

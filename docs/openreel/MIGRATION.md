@@ -156,3 +156,8 @@ Primary source reviewed: [OpenReel TTS panel at current upstream](https://github
 OpenReel's original MIT license remains at `vendor/openreel/LICENSE`, with an unchanged copy in `integration/openreel/licenses/OPENREEL-MIT.txt`. Preserve copyright and license in redistributed OpenReel code/binaries and any substantial copied code; keep third-party notices from packaged dependencies. Desktop also preserves `apps/desktop/LICENSES/FFMPEG.md`, `BLENDER.md`, `GPL-2.0.txt` and `GPL-3.0.txt`; OpenReel MIT does not replace those bundled-tool notices. No distributable binary was produced here. Astel currently has no repository LICENSE detected by GitHub: this branch does not invent or change Astel's licensing.
 
 Primary evidence: [Astel repository](https://github.com/asteloleh-gif/video-editor), [OpenReel pinned source](https://github.com/Augani/openreel-video/tree/c9340465e5d37e684cc25bdbe746c4ccd45e165c), local generated catalog and the recorded Git histories. See `VALIDATION.md` for exact verification limits and `MAC_SETUP.md` for setup.
+
+
+## Native Voicebox speech implemented — 2026-10-27
+
+The isolated OpenReel Astel candidate now implements paste text → approved RU/EN personal voice → durable local background job → preview/download → guarded audio timeline import. This closes the first native speech UI milestone. Broader narrated video assembly, word timing/captions and publishing remain outside this milestone. See [installation and verification](../voicebox/OPENREEL_LOCAL_SPEECH.md). The original application, clean upstream submodule, project data and existing MCP tunnel remain preserved.
