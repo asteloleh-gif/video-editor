@@ -360,8 +360,9 @@
           "full_scale_samples": 0,
           "tempo_or_pitch_shift": false,
           "source_preserved": true,
-          "human_assessment": "preferred_tone_transferred_to_full_length; listening_pending",
-          "production_approved": false
+          "human_assessment": "owner_provisionally_accepted_as_Russian_working_baseline; tentative",
+          "production_approved": false,
+          "next_test": "evaluate within an actual video when requested"
         }
       }
     }
