@@ -42,12 +42,13 @@ def editorial_review(service, request):
 
 def snapshot(service):
     from .hub_delivery import records
+    from .workspace_runtime import health
     data = service.listing(); cards = []
     for story in data["stories"]:
         card = review_card(service, story["id"])
         card["editorial_reviews"] = [r for r in data["reviews"] if r["story_id"] == story["id"] and r["digest"] == story["digest"]]
         cards.append(card)
-    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "handoffs": records(service), "publishing_enabled": False, "hub_connection": "simulation_only", "local_only": True}
+    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "handoffs": records(service), "runtime": health(service), "publishing_enabled": False, "hub_connection": "simulation_only", "local_only": True}
 
 
 def adapt_document(html):

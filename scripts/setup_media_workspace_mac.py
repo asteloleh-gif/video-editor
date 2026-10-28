@@ -10,9 +10,20 @@ import plistlib
 import shutil
 import subprocess
 import sys
+import time
 
 REPO = Path(__file__).resolve().parent.parent
 HOME = Path.home() / '.local/share/astel-media-workspace'
+
+
+def bootstrap_agent(domain, agent):
+    # launchd may still be removing the old registration after bootout returns.
+    # Retry only this exact user agent; never request root or alter global jobs.
+    for attempt in range(8):
+        result = subprocess.run(['launchctl','bootstrap',domain,str(agent)],capture_output=True)
+        if result.returncode == 0: return
+        if attempt < 7: time.sleep(.25)
+    raise RuntimeError(f'LaunchAgent did not start: {agent.name}; existing data preserved')
 
 
 def main():
@@ -21,6 +32,7 @@ def main():
     parser.add_argument('--canvas-html', type=Path, help='Owner-supplied Canvas 2026-10-27 HTML; kept private')
     parser.add_argument('--canvas-package', type=Path, help='Owner-supplied integration ZIP; provenance only, never executed')
     parser.add_argument('--start-canvas', action='store_true', help='Install/start the private local Canvas LaunchAgent')
+    parser.add_argument('--start-worker', action='store_true', help='Install/start the persistent job supervisor (also enabled by --start-canvas)')
     args = parser.parse_args()
     for source, expected in ((args.canvas_html, '89c0152e696fed0e836029d5c64fe5d63b0afa85e7bf7ac93751a64a53d20ada'), (args.canvas_package, 'cca3c19768f91571d628f304c46983af41e69383a040fd15233b351d4dd6d018')):
         if source and hashlib.sha256(source.read_bytes()).hexdigest() != expected:
@@ -35,7 +47,7 @@ def main():
     if not python.exists(): subprocess.run([sys.executable, '-m', 'venv', str(HOME / 'venv')], check=True)
     subprocess.run([str(python), '-m', 'pip', 'install', '--require-hashes', '--no-deps', '-r', str(REPO / 'integration/video-search/requirements-mac.txt')], check=True, stdout=subprocess.DEVNULL)
     module = HOME / 'src/video_editor'; module.mkdir(parents=True, exist_ok=True)
-    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'hub_delivery.py', 'drive_delivery.py', 'drive_authorization.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
+    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'workspace_runtime.py', 'hub_delivery.py', 'drive_delivery.py', 'drive_authorization.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
         source = REPO / 'src/video_editor' / name
         temporary = module / (name + '.install'); shutil.copyfile(source, temporary); temporary.chmod(0o600); temporary.replace(module / name)
     binary = HOME / 'bin/node'; binary.parent.mkdir(exist_ok=True)
@@ -60,7 +72,20 @@ def main():
     files = [*module.glob('*.py'), renderer / 'render.cjs', *(renderer / 'src').glob('*.tsx'), canvas / 'workspace.js', canvas / 'workspace.css']
     hashes = {str(file.relative_to(HOME)): hashlib.sha256(file.read_bytes()).hexdigest() for file in sorted(files)}
     (HOME / 'install.json').write_text(json.dumps({'version': 1, 'remotion': '4.0.529', 'files': hashes, 'local_only': True, 'publishing_enabled': False}, indent=2))
-    label = 'us.astel.media-workspace.canvas'; domain = f'gui/{os.getuid()}'
+    domain = f'gui/{os.getuid()}'
+    worker_label = 'us.astel.media-workspace.worker'
+    worker_agent = Path.home() / 'Library/LaunchAgents' / (worker_label + '.plist')
+    if args.start_worker or args.start_canvas or worker_agent.exists():
+        worker_agent.parent.mkdir(parents=True, exist_ok=True)
+        worker_config = {'Label':worker_label, 'ProgramArguments':[str(python),'-m','video_editor.workspace_runtime','serve'],
+                         'RunAtLoad':True,'KeepAlive':True,'ThrottleInterval':10,
+                         'EnvironmentVariables':{'PYTHONPATH':str(HOME/'src'),'ASTEL_MEDIA_HOME':str(HOME),'PATH':'/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin'},
+                         'StandardOutPath':str(HOME/'supervisor-service.log'),'StandardErrorPath':str(HOME/'supervisor-service.log')}
+        subprocess.run(['launchctl','bootout',domain+'/'+worker_label],capture_output=True)
+        worker_agent.write_bytes(plistlib.dumps(worker_config));worker_agent.chmod(0o600)
+        bootstrap_agent(domain,worker_agent)
+        print('Persistent workspace supervisor installed for user login recovery')
+    label = 'us.astel.media-workspace.canvas'
     agent = Path.home() / 'Library/LaunchAgents' / (label + '.plist')
     if args.start_canvas or agent.exists():
         agent.parent.mkdir(parents=True, exist_ok=True)
@@ -69,7 +94,7 @@ def main():
                   'StandardOutPath': str(HOME / 'canvas-service.log'), 'StandardErrorPath': str(HOME / 'canvas-service.log')}
         subprocess.run(['launchctl', 'bootout', domain + '/' + label], capture_output=True)
         agent.write_bytes(plistlib.dumps(config)); agent.chmod(0o600)
-        subprocess.run(['launchctl', 'bootstrap', domain, str(agent)], check=True)
+        bootstrap_agent(domain,agent)
         print('Local Canvas: http://127.0.0.1:17531/ (simulation handoff; publishing disabled)')
     print('Astel media workspace installed; publishing disabled')
 

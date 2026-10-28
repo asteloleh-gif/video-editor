@@ -27,6 +27,8 @@ from .story_jobs import digest, lock, write
 HOME = Path.home() / ".local/share/astel-media-workspace"
 END = {"ready", "failed", "cancelled"}
 MAX_FILE = 100 * 1024 * 1024
+MAX_PENDING_JOBS = 100
+MAX_WORKER_PROCESSES = 4
 UA = "AstelMediaWorkspace/1.0 (https://github.com/asteloleh-gif/video-editor; local review)"
 
 
@@ -159,6 +161,8 @@ class Workspace:
             if row and row[0] != expected:
                 raise ValueError("Request ID already belongs to other settings")
             if not row:
+                if db.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= MAX_PENDING_JOBS:
+                    raise ValueError("Queue contains 100 unfinished jobs; finish or cancel one before adding more")
                 self.validate(kind, payload)
                 self.folder(job_id).mkdir(mode=0o700)
                 db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?,?,?,?,?,?)", (job_id, kind, expected, json.dumps(payload, ensure_ascii=False), "queued", 0, "В очереди", None, "{}", timestamp(), timestamp()))
@@ -218,8 +222,16 @@ class Workspace:
     def spawn(self, job_id):
         if self.status(job_id)["status"] in END:
             return
+        with self.db() as db:
+            eligible = {row[0] for row in db.execute("SELECT id FROM jobs WHERE status IN ('queued','running') ORDER BY created_at,rowid LIMIT ?", (MAX_WORKER_PROCESSES,))}
+        if job_id not in eligible:
+            return  # The persistent supervisor advances the bounded backlog.
         try:
             with lock(self.folder(job_id) / "run.lock", True) as handle:
+                current = self.status(job_id)
+                if current['kind'] in {'story','acquire'} and shutil.disk_usage(self.home).free < 8 * 1024**3:
+                    self.update(job_id, status='queued', phase='Ожидает свободного места на диске')
+                    return
                 with (self.folder(job_id) / "worker.log").open("ab") as log:
                     os.chmod(log.name, 0o600)
                     subprocess.Popen([sys.executable, "-m", "video_editor.media_workspace", "worker", "--id", job_id, "--lock-fd", str(handle.fileno())],
@@ -237,9 +249,13 @@ class Workspace:
             raise InterruptedError("Cancelled")
 
     def cancel(self, job_id):
-        if self.status(job_id)["status"] not in END:
+        status = self.status(job_id)['status']
+        if status not in END:
             (self.folder(job_id) / "cancel").touch(mode=0o600)
-            self.spawn(job_id)
+            if status == 'queued':
+                self.update(job_id, status='cancelled', phase='Остановлено')
+            else:
+                self.spawn(job_id)
         return self.status(job_id)
 
     def worker(self, job_id, inherited_fd):
