@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-28",
+  "purpose": "Distinguish installed product functions from agent/terminal-assisted pilot work before choosing the next infrastructure stage",
+  "verified_now": {
+    "candidate_app": "installed; native start screen visible with saved Amazon - pilot 01 and Vertical projects",
+    "installed_patch_matches_repository_search_and_voicebox_patch": true,
+    "voicebox_service": "healthy; model_loaded=true; backend=mlx; cloud_enabled=false",
+    "candidate_mcp": "responding; get_editor_state reports no project open",
+    "automatic_story_job_module": false
+  },
+  "functions": [
+    {
+      "name": "Own-voice text to speech",
+      "state": "native UI installed",
+      "access": "OpenReel Astel / AI Generate / Text to Speech / Voicebox",
+      "user_terminal_needed": false,
+      "current_verification": "service health plus installed build receipt; no new generation",
+      "prior_validation": "Owner tested; native RU/EN generation, recovery and timeline import documented"
+    },
+    {
+      "name": "Topic video search",
+      "state": "native UI installed; metadata and saved URL selections",
+      "access": "OpenReel Astel / AI Generate / Найти видео",
+      "user_terminal_needed": false,
+      "current_verification": "installed patch matches current implementation; real query not rerun",
+      "limits": [
+        "YouTube only",
+        "does not download selected files",
+        "no background collection/growth ranking"
+      ]
+    },
+    {
+      "name": "Amazon story and 3D montage",
+      "state": "agent-assisted source selection and Remotion code/commands",
+      "access": "local Remotion Studio plus repository scripts",
+      "user_terminal_needed": "agent currently performs preparation and build commands",
+      "limits": [
+        "reviewed source manifest",
+        "seven authored story scenes in original preparer",
+        "V2 editable preview; no native assembly UI",
+        "native OpenReel holds flattened V1 MP4 only"
+      ]
+    },
+    {
+      "name": "Existing AutoEditor API/worker",
+      "state": "implemented for a separate RAW-footage editing workflow",
+      "current_verification": "code inspection only; production runtime not contacted or changed",
+      "limits": [
+        "not a persistent StoryPilot build queue",
+        "does not establish theme-to-story automation"
+      ]
+    },
+    {
+      "name": "Discovery to editor material library",
+      "state": "not integrated end to end",
+      "limits": [
+        "Commons acquisition was agent-assisted for this pilot",
+        "search selections do not automatically become acquired/approved editor assets"
+      ]
+    },
+    {
+      "name": "Review and Lazy Distribution handoff",
+      "state": "not connected by the story pilot",
+      "limits": [
+        "no pilot submission to Hub",
+        "no publishing or production configuration changes"
+      ]
+    }
+  ],
+  "recommended_next_scope": {
+    "name": "Native build workflow with persistent jobs",
+    "first_contract": "approved inputs → queued/rendering/ready/failed/cancelled → saved MP4 → explicit editor import",
+    "requirements": [
+      "survive editor restart",
+      "immutable source media and input fingerprint",
+      "bounded fixed local renderer; renderer cannot supply commands",
+      "progress and actionable errors in UI",
+      "existing worker/publisher remain isolated"
+    ],
+    "scope_limit": "Does not by itself implement arbitrary-topic research, automatic licensing decisions or multi-platform publishing"
+  },
+  "alternative_priorities": [
+    "Own background discovery and acquisition library",
+    "Approved artifact handoff to Lazy Distribution"
+  ],
+  "owner_priority_question": "Pending asynchronous selection; no infrastructure subsystem chosen or mutated in this audit",
+  "pilot_quality_work": "remains paused; checkpoint and media unchanged",
+  "publishing_changed": false
+}
