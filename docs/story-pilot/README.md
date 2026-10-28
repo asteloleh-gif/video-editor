@@ -97,3 +97,24 @@ npm run verify:motion -- ../output/motion-study
 ```
 
 The check uses headless Chrome/ANGLE, renders the three comparison phases and both portraits, and verifies exact PNG equality when returning to an earlier frame. This is sampled render QA, not a full video encode or a cross-machine reproducibility guarantee. The user still chooses the preferred style. Existing pilot MP4 bytes and all other compositions are preserved. Validation, including the existing dependency audit findings, is in `MOTION_STUDY_VALIDATION_2026-10-28.json`.
+
+## Version 2: selected 3D integrated with the original story
+
+The owner selected the 3D style. Open `AstelStoryPilot-3D` in Studio for the complete 1080×1920, 30fps preview (1868 frames, about 62.27 seconds). The original `AstelStoryPilot` and the A/B study remain available. This revision reuses the exact local narration WAV, approved phrase captions, two reviewed source videos and both photos. No TTS request, media download, native OpenReel mutation or production publishing change is involved.
+
+`remotion/src/AmazonMotionPilot.tsx` authors these source-editable groups:
+
+| Story time | Picture and motion |
+| --- | --- |
+| 0–6 s | Real warehouse video with the book → parcel → server 3D hook |
+| 6–15 s | Existing Bezos photo, with the 1994/1995 change tied to the spoken caption boundary |
+| 15–22 s | 3D book and progressively revealed catalog/site labels |
+| 22–32 s | Two full-frame warehouse shots; a 3D parcel overlays the footage at 26–32 s |
+| 32–45 s | 3D server network; 2006/S3, data and developer labels appear at the existing phrase boundaries |
+| 45–51 s | Existing warehouse footage plus a 3D system inset |
+| 51–59.243 s | Existing warehouse photo with the final 3D transformation |
+| Final 3 s | Authors, licenses and illustration credits |
+
+Real footage now occupies 22 narration seconds, with 3D both intercut and overlaid. Source video audio stays muted; one continuous narration track and its caption track share the story timing group. Caption JSON is converted to the `Caption` type without changing words/timestamps, and display uses balanced phrase wrapping. The upstream Basic Captions source endpoint returned HTTP 403; the existing local phrase-display approach was retained. This does not add word-level forced alignment or claim the native caption source editor is configured.
+
+`NarrativeMotion` is also registered as `Amazon3DLayer` for isolated inspection. An optional pose clock on the existing Three.js renderer follows story beats; the original A/B renderer's default clock is preserved and its reference frame remains byte-identical in this runtime. Repeated-frame and final-credit checks, plus source/audio integrity, are recorded in `MOTION_INTEGRATION_VALIDATION_2026-10-28.json`. Validation covers sampled frame rendering and unmuted Studio playback, not a full MP4 encode or an independent listening review. The accepted v1 MP4 remains byte-identical.

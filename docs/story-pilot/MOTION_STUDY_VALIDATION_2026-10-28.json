@@ -1,6 +1,6 @@
 {
   "date": "2026-10-28",
-  "status": "implemented; sampled render QA passed; owner style choice pending",
+  "status": "owner selected 3D; integrated preview available as AstelStoryPilot-3D",
   "compositions": [
     "AmazonMotion-Compare",
     "AmazonMotion-2D",
@@ -140,5 +140,6 @@
     "Sampled still rendering, not complete video encoding or performance benchmarking",
     "Exact PNG repeat verified in this runtime; cross-machine GPU equality not claimed",
     "No automatic source selection or full pilot re-edit"
-  ]
+  ],
+  "owner_style_choice": "3D"
 }

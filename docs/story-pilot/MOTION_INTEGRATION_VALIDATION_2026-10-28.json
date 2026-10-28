@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-28",
+  "composition": "AstelStoryPilot-3D",
+  "status": "implemented; sampled frame rendering and unmuted Studio preview verified; owner review pending",
+  "owner_style_choice": "3D selected from AmazonMotion-Compare",
+  "checks": {
+    "typecheck": "passed",
+    "render": {
+      "date": "2026-10-28",
+      "composition": "AstelStoryPilot-3D",
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "durationInFrames": 1868,
+      "mode": "sampled still QA; no full video export",
+      "results": [
+        {
+          "frame": 75,
+          "name": "hook",
+          "sha256": "037dac5fc7e81a1ae00b5134d39b368b86898a14a5578000ec58500659fa3b78"
+        },
+        {
+          "frame": 210,
+          "name": "founder",
+          "sha256": "5de1c61b583cc06b9a39528f3d19849a747b6b6ba576ecff57f4347ed4793b3e"
+        },
+        {
+          "frame": 375,
+          "name": "store-1995",
+          "sha256": "3cf45d624f5bc69538a57444f90219fc2159c5ca608f44b452bcd65163e79fa8"
+        },
+        {
+          "frame": 510,
+          "name": "book",
+          "sha256": "c24c7e056d4527321a2f5f1460f03f3f508611ccaf42daef3e0b3c56746fd436"
+        },
+        {
+          "frame": 720,
+          "name": "warehouse",
+          "sha256": "82f4ada7d6269636ed3e1b2bf4bef620f8677ac9878e7e219a5b40a6e81deaf1"
+        },
+        {
+          "frame": 870,
+          "name": "warehouse-plus-parcel",
+          "sha256": "683f1e1e14c1ab5d9365265158cfb5cd6d8feb3b0dd203bc7f41aac2b4b2cd3c"
+        },
+        {
+          "frame": 1110,
+          "name": "s3",
+          "sha256": "6e54eb6ec109bece4d40a9e9a237869ce603308baaa75e52101903d5c9809a7c"
+        },
+        {
+          "frame": 1290,
+          "name": "developers",
+          "sha256": "3b5884c2db527d6904c20e209f9ca48b6e113e734ebc3ba5c46dafdb4ca09eac"
+        },
+        {
+          "frame": 1440,
+          "name": "video-plus-network",
+          "sha256": "27ab1a8cce4cf5925f99195b47c73a6ca27f2397fcc4e840784946df41ba7aec"
+        },
+        {
+          "frame": 1665,
+          "name": "closing",
+          "sha256": "ecff98fae8bb09bd503815a5a47f3149f61285a7eb956982c8ed3207d84d5f25"
+        },
+        {
+          "frame": 1810,
+          "name": "credits",
+          "sha256": "7f44ae0562f31f1e9fa32f6384c6f70200ad152a04f29dc139a7debe6283bf6f"
+        },
+        {
+          "frame": 1867,
+          "name": "last-frame",
+          "sha256": "7f44ae0562f31f1e9fa32f6384c6f70200ad152a04f29dc139a7debe6283bf6f"
+        },
+        {
+          "frame": 870,
+          "name": "parcel-repeat",
+          "sha256": "683f1e1e14c1ab5d9365265158cfb5cd6d8feb3b0dd203bc7f41aac2b4b2cd3c"
+        }
+      ],
+      "repeat_matches": true,
+      "ab_unchanged": true
+    },
+    "source_hashes": "all four originals match reviewed manifest",
+    "source_ranges": [
+      {
+        "id": "hook",
+        "start": 0,
+        "end": 6,
+        "asset": "warehouse-1",
+        "trim": 12
+      },
+      {
+        "id": "delivery-a",
+        "start": 22,
+        "end": 27,
+        "asset": "warehouse-1",
+        "trim": 2
+      },
+      {
+        "id": "delivery-b",
+        "start": 27,
+        "end": 32,
+        "asset": "warehouse-2",
+        "trim": 0
+      },
+      {
+        "id": "lesson",
+        "start": 45,
+        "end": 51,
+        "asset": "warehouse-2",
+        "trim": 10
+      }
+    ],
+    "source_ranges_fit": true,
+    "original_narration_reused": true,
+    "narration_sha256": "64e9089eb4c13c0e6d59001933bfe0e3e470ed55474cdd065c3d62505b5ceb06",
+    "captions": "exact reviewed text and timing retained; Caption JSON conversion only",
+    "original_pilot_sha256_unchanged": "85d872aee8e3b28fdd8303be87b384c46ed53b178910125f427fdbfbe1e68480",
+    "studio": {
+      "composition": "AstelStoryPilot-3D",
+      "frame_observed": 80,
+      "playing": true,
+      "muted": false,
+      "volume": 1,
+      "playback_rate": 1,
+      "error_overlay": null
+    }
+  },
+  "timeline": {
+    "narration_seconds": 59.243125,
+    "duration_frames": 1868,
+    "fps": 30,
+    "source_video_seconds": 22,
+    "parallel_3d_on_video_seconds": [
+      {
+        "start": 0,
+        "end": 6
+      },
+      {
+        "start": 26,
+        "end": 32
+      },
+      {
+        "start": 45,
+        "end": 51
+      }
+    ]
+  },
+  "scope": {
+    "new_tts_jobs": 0,
+    "new_source_downloads": 0,
+    "full_mp4_export": false,
+    "native_openreel_mutation": false,
+    "production_publishing_change": false
+  },
+  "limits": [
+    "Sampled still rendering and active unmuted playback; independent listening not performed",
+    "Phrase captions retained; no word-level forced alignment",
+    "No full MP4 encode or native layered OpenReel handoff in this revision"
+  ]
+}

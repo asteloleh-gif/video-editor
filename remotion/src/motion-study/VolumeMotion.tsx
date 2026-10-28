@@ -4,7 +4,7 @@ import {Color} from 'three';
 import {useCurrentFrame, useVideoConfig} from 'remotion';
 import {motionState, palette as c} from './timing';
 
-type Props = {width: number; height: number};
+type Props = {width: number; height: number; timelineSeconds?: number};
 type RackProps = {x: number; amount: number};
 
 const SatelliteRack = ({x, amount}: RackProps) => <group position={[x*amount,-0.12,-1.25]} scale={0.68*amount+0.001}>
@@ -15,10 +15,11 @@ const SatelliteRack = ({x, amount}: RackProps) => <group position={[x*amount,-0.
   </group>)}
 </group>;
 
-export const VolumeMotion = ({width, height}: Props) => {
+export const VolumeMotion = ({width, height, timelineSeconds}: Props) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const m = motionState(frame, fps);
+  const elapsed = frame/fps;
+  const m = motionState(timelineSeconds === undefined ? frame : timelineSeconds*fps, fps);
   const book = 1-m.box;
   const box = m.box*(1-m.server);
   const w = 1.85+m.box*.55-m.server*.85;
@@ -37,7 +38,7 @@ export const VolumeMotion = ({width, height}: Props) => {
     <mesh rotation={[-Math.PI/2,0,0]} position={[0,-1.83,0]} receiveShadow>
       <planeGeometry args={[200,200]}/><shadowMaterial transparent opacity={.3}/>
     </mesh>
-    <group position={[0,(1-m.entrance)*1.5+.04*Math.sin(m.seconds*1.3),0]}
+    <group position={[0,(1-m.entrance)*1.5+.04*Math.sin(elapsed*1.3),0]}
       rotation={[0,-.28+m.box*.55+m.server*.35,0]} scale={.8+.2*m.entrance}>
       <mesh castShadow receiveShadow><boxGeometry args={[w,h,d]}/><meshStandardMaterial color={color} roughness={.38} metalness={.08}/></mesh>
       <group scale={[book+.001,book+.001,book+.001]}>
@@ -65,7 +66,7 @@ export const VolumeMotion = ({width, height}: Props) => {
     <SatelliteRack x={-2.2} amount={m.network}/>
     <SatelliteRack x={2.2} amount={m.network}/>
     {[0,1,2,3,4,5].map(n=>{
-      const u=(m.seconds*.32+n/6)%1;
+      const u=(elapsed*.32+n/6)%1;
       return <mesh key={n} position={[-2.2+4.4*u,-1.68,-.6]} scale={m.network*.055+.001}>
         <sphereGeometry args={[1,8,8]}/><meshStandardMaterial color={c.mint} emissive={c.mint} emissiveIntensity={.7}/>
       </mesh>;
