@@ -1,0 +1,159 @@
+{
+  "date_local": "2026-10-27",
+  "timezone": "America/Chicago",
+  "scope": "topic video discovery and source acquisition research",
+  "status": "research_complete; implementation_not_started",
+  "current_astel_commit": "a95d2089cda5c7845ea8f5d3289c3c2ceb309ea9",
+  "asap_checkout_commit": "275bc4c774cf3317c040c8a4db56ab1cd054745c",
+  "recommended": {
+    "topic_search": [
+      "vidIQ MCP",
+      "YouTube Data API",
+      "Brave Video Search"
+    ],
+    "stock_files": [
+      "Pexels",
+      "Coverr"
+    ],
+    "reusable_library": "local files and optional authorized Drive intake",
+    "code_reference": "MoneyPrinterTurbo stock adapter subset; retain MIT notices",
+    "editor": "existing OpenReel Astel",
+    "voice": "existing local Voicebox"
+  },
+  "repositories": [
+    {
+      "repo": "harry0703/MoneyPrinterTurbo",
+      "sha": "950ba89899d3b6ef080c18ad5791e7c9ead0ac66",
+      "commit_at": "2026-10-27T10:12:02Z",
+      "license": "MIT",
+      "inspected": [
+        "app/services/material.py",
+        "app/services/material_cache.py",
+        "LICENSE"
+      ],
+      "decision": "preferred stock-code donor; add pagination and semantic ranking"
+    },
+    {
+      "repo": "RayVentura/ShortGPT",
+      "sha": "3df4e0f7a422bf7386565d498bf4521a2544c614",
+      "commit_at": "2025-02-10T19:28:23Z",
+      "license": "MIT",
+      "inspected": [
+        "shortGPT/api_utils/pexels_api.py"
+      ],
+      "decision": "reference only; old API endpoint and stale default-branch history"
+    },
+    {
+      "repo": "IliasHad/edit-mind",
+      "sha": "39ac8460e21f5140b88abc7a6f116c71d9011f7f",
+      "commit_at": "2026-10-24T22:50:31Z",
+      "license": "Edit Mind License since 2026-02-21; not MIT",
+      "inspected": [
+        "README.md",
+        "LICENSE.md"
+      ],
+      "decision": "do not copy into MIT integration; optional separate product evaluation"
+    },
+    {
+      "repo": "Chamanrajragu/purffle-shorts",
+      "sha": "baaba035be13fa4aa2ebc31951d58ea141e2d74c",
+      "commit_at": "2026-10-20T06:55:10Z",
+      "license": "MIT",
+      "inspected": [
+        "README.md",
+        "LICENSE"
+      ],
+      "decision": "secondary candidate; search implementation not audited"
+    },
+    {
+      "repo": "ClipsAI/clipsai",
+      "license": "MIT",
+      "pushed_at": "2024-01-17T13:31:25Z",
+      "decision": "clipping library, not source discovery"
+    }
+  ],
+  "limits_verified": {
+    "pexels": {
+      "per_hour": 200,
+      "per_month": 20000,
+      "new_video_endpoint": "/v1/videos/search"
+    },
+    "pixabay": {
+      "per_60_seconds": 100,
+      "cache_hours": 24,
+      "systematic_mass_downloads_allowed": false
+    },
+    "youtube_search": {
+      "default_daily_calls": 100,
+      "cost_per_call": 1,
+      "quota_bucket": "Search Queries",
+      "max_page_results": 50
+    },
+    "coverr_mcp": {
+      "endpoint": "https://mcp.coverr.co/mcp",
+      "key_required": true
+    },
+    "brave_search": {
+      "usd_per_1000_requests": 5,
+      "monthly_credit_usd": 5
+    },
+    "twelvelabs": {
+      "pricing_model": "current plans and allowances; do not assume legacy per-minute free tier",
+      "plus_usd_month": 29,
+      "pro_usd_month": 99
+    }
+  },
+  "connector_checks": {
+    "vidiq": {
+      "tools_visible": true,
+      "schemas_inspected": true,
+      "live_searches": 0,
+      "account_auth_tested": false,
+      "declared_search_credits_per_call": 5
+    },
+    "asap": {
+      "read_capabilities_attempted": true,
+      "result": "unavailable: tunnel_client_not_seen",
+      "production_mutations": false
+    }
+  },
+  "boundaries": {
+    "media_downloads_performed": 0,
+    "new_paid_calls": 0,
+    "subscriptions_changed": false,
+    "production_publishing_changed": false,
+    "upstream_code_installed_or_executed": false
+  },
+  "proposed_pilot": {
+    "theme_count": 1,
+    "candidate_cap": 100,
+    "target_selected_assets": 10,
+    "draft_seconds": [
+      30,
+      60
+    ],
+    "targets_are_acceptance_goals_not_measured_throughput": true
+  },
+  "report": "docs/openreel/VIDEO_SOURCE_DISCOVERY_2026-10-27.md",
+  "sources": [
+    "https://developers.google.com/youtube/data/reference/rest/v3/search/list",
+    "https://developers.google.com/youtube/terms/developer-policies",
+    "https://api-dashboard.search.brave.com/documentation/services/video-search",
+    "https://api-dashboard.search.brave.com/documentation/pricing",
+    "https://www.pexels.com/api/documentation/",
+    "https://www.pexels.com/license/",
+    "https://api.coverr.co/docs/mcp/",
+    "https://api.coverr.co/docs/videos/",
+    "https://api.coverr.co/docs/video-scenes/",
+    "https://pixabay.com/api/docs/",
+    "https://github.com/yt-dlp/yt-dlp",
+    "https://github.com/yt-dlp/yt-dlp/wiki/EJS",
+    "https://developers.tiktok.com/products/research-api/",
+    "https://developers.tiktok.com/docs/en/display-api-get-started",
+    "https://docs.twelvelabs.io/docs/guides/search",
+    "https://www.twelvelabs.io/pricing",
+    "https://docs.twelvelabs.io/docs/concepts/indexes",
+    "https://apify.com/zeropointstudio/youtube-scraper",
+    "https://support.vidiq.com/en/articles/15082430-vidiq-mcp"
+  ]
+}
