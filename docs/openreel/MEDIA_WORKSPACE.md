@@ -33,7 +33,7 @@ flowchart LR
 
 Private home: `~/.local/share/astel-media-workspace/`. SQLite catalogue, assets, job logs, narration, renders and installation receipts remain private. Owner HTML/ZIP are pinned by SHA and never committed or publicly hosted. No tokens, voice references or unlisted Drive links enter Git/HTML. The local Canvas has loopback binding, Host/Origin checks, HttpOnly SameSite cookie, CSRF protection, CSP and versioned hash-checked media Range responses. It does not expose a publisher or shell.
 
-The user LaunchAgent supervisor runs after login, scans every 20 seconds, caps pending intents at 100 and child processes at four. Heavy work has one lock and an 8 GiB free-space reserve. Failed work needs explicit retry. The real recovery smoke completed one queued search, restarted the supervisor and retained exactly one job; physical Mac reboot is untested.
+The user LaunchAgent supervisor runs after login, scans every 20 seconds, caps pending intents at 100 and child processes at four. Heavy work has one lock and an 8 GiB free-space reserve. Failed work needs explicit retry. The real recovery smoke completed one queued search, restarted the supervisor and retained exactly one job; physical Mac reboot is untested. Follow-up SIGTERM acceptance on the actual installed launchd job confirmed automatic KeepAlive restart, a new PID/fresh heartbeat, all 10 completed jobs and both accepted MP4 hashes preserved.
 
 Retention removes only verified per-job asset duplicates older than seven days with an intact hashed library source. It writes a durable restore map first. RAW/library originals, narration, final MP4 and voice references remain. Restore: `PYTHONPATH="$HOME/.local/share/astel-media-workspace/src" "$HOME/.local/share/astel-media-workspace/venv/bin/python" -m video_editor.workspace_runtime cache-restore --id <UUID>`.
 
@@ -84,3 +84,13 @@ The wrapper reads `~/.openreel/astel-voicebox-mcp-endpoint.json`; the dynamic be
 The existing `astel-openreel` Secure MCP Tunnel was reconnected to this wrapper using its existing tunnel ID and the same saved runtime key. Health and actual ChatGPT `get_editor_state` passed. No new tunnel/key/model request was created. To reconnect after a runtime stop, use `scripts/reconnect_openreel_workspace_tunnel_mac.py --credential-file /absolute/path/to/existing/.env.local`; it requires an ignored, untracked owner-only existing key file and refuses another running command. Never paste the key in chat. Reconnect does not install a login service for the tunnel. A client may need to refresh its tool list to discover the 11 added tools.
 
 Remaining acceptance: physical signed Telegram owner session/phone, a real Mac reboot (process restart already passed), Kevin Stage 2 and representative owner visual A/B. Paid planner and publication remain owner-controlled and OFF/unapproved. No 100-render load or general autonomous topic-to-fact-to-footage quality claim is made.
+
+After an owner-chosen physical reboot, run the read-only acceptance helper with the durable private baseline:
+
+```bash
+"$HOME/.local/share/astel-media-workspace/venv/bin/python" scripts/verify_media_workspace_mac.py \
+  --previous "$HOME/.local/share/astel-media-workspace/validation/launchagent-20261028/result.json" \
+  --out /private/tmp/astel-after-reboot.json
+```
+
+The report distinguishes a changed physical boot identity from a process restart and compares the prior job snapshot and accepted media hashes. It does not reboot the Mac or change the queue. `--restart-idle-worker` is a separate explicit KeepAlive smoke and refuses active jobs or enabled topic watches.

@@ -104,7 +104,16 @@
     "disk_reserve_gib": 8,
     "real_search_recovery_and_supervisor_restart": "PASS",
     "physical_mac_reboot_tested": false,
-    "retention": "verified duplicate assets only, age >=7 days, durable restore map"
+    "retention": "verified duplicate assets only, age >=7 days, durable restore map",
+    "installed_launchd_keepalive": {
+      "tested": true,
+      "automatic_new_pid": true,
+      "fresh_heartbeat": true,
+      "job_count": 10,
+      "all_job_rows_preserved": true,
+      "accepted_mp4_hashes_preserved": true,
+      "physical_reboot": false
+    }
   },
   "discovery": {
     "own_adapter_watch": "PASS: real isolated Commons watch, 2 candidates, second tick retained exactly one job",
