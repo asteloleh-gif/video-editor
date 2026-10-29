@@ -1,12 +1,12 @@
 # OpenReel → Canvas → existing Hub
 
-Current acceptance: 28 October 2026. Branch `integration/astel-media-canvas-stack`. The two explicitly approved existing Railway services are deployed; no new service or key was created. Production publishing configuration is unchanged; paid planner is OFF.
+Acceptance baseline: 28 October 2026. Branch `integration/astel-media-canvas-stack`. The two explicitly approved existing Railway services were deployed; no new service or key was created. Production publishing configuration is unchanged; paid planner is OFF. **29 October recovery:** Hub is online on the same approved source; Telegram was separately stopped at the owner's request and PR #36 remains on hold. See [current recovery evidence](RECOVERY_2026-10-29.json).
 
 ## Verified path
 
 The existing warehouse story (41.024 seconds) was uploaded once to its private delivery copy. The owner separately authorized link-reader access only to that final MP4. RAW, voice references and source folders remain private. The deployed Hub then fetched all **25,369,940 bytes**, `video/mp4`, and matched SHA-256 `bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123` (latest proof `2026-10-29T00:54:08.014Z`). This is actual server execution, not the earlier Mac compatibility probe.
 
-Plan `b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa` remains `simulation`, now `NEEDS_APPROVAL`. Independent Hub MCP status confirmed publication approval **false**, delivery **DRAFT**, attempts **0**, receipt absent. `request_review` sent it for owner review; no approve/schedule/publish operation was called.
+At the original acceptance, plan `b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa` was `simulation` / `NEEDS_APPROVAL`, approval false. `request_review` sent it for owner review. The 29 October recovery READ now finds `APPROVED` with an existing approval timestamp `2026-10-29T01:46:27.954Z`. It still has mode **simulation**, delivery **DRAFT**, attempts **0**, receipt absent. Recovery did not approve, schedule or publish it.
 
 | Service | Delivered source | Deployment |
 |---|---|---|

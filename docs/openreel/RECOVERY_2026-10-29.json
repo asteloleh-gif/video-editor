@@ -1,0 +1,58 @@
+{
+  "observed_at_utc": "2026-10-29T17:34:51Z",
+  "branch": "integration/astel-media-canvas-stack",
+  "scope": "Restore interrupted operation and honor owner Telegram hold",
+  "local_checked_at_utc": "2026-10-29T17:24:45Z",
+  "local": {
+    "worker_healthy": true,
+    "jobs_retained": 10,
+    "previous_jobs_match": true,
+    "previous_media_hashes_match": true,
+    "voicebox_healthy": true,
+    "voice_model_loaded": true,
+    "voice_cloud_enabled": false,
+    "canvas_http": 200,
+    "desktop_mcp_tools": 322,
+    "external_project_read": "PASS",
+    "physical_boot_changed": false,
+    "physical_reboot_acceptance": "NOT_PROVEN"
+  },
+  "hub": {
+    "state": "online",
+    "running_replicas": 1,
+    "health_http": 200,
+    "source_commit": "816b50dc0aa81a2b339de996e1bb0414b53404e3",
+    "deployment": "3e26a34e-aa13-4827-9386-0f982cd561b1",
+    "deployment_status": "SUCCESS",
+    "staged_changes": false
+  },
+  "telegram": {
+    "owner_requested": "Temporarily stop bot; pause UI work",
+    "action": "Remove only active deployment through authenticated Chrome dashboard",
+    "stopped_deployment": "1d5d9baa-00af-4e2d-b9c0-9bfbbbbebbac",
+    "deployment_status": "REMOVED",
+    "state": "offline",
+    "active_deployments": 0,
+    "source_commit_preserved": "4c05a67177928e82a813df1781e8f33680bc0db6",
+    "staged_changes": false,
+    "pr_36": "ON_HOLD_NOT_DEPLOYED",
+    "service_deleted": false,
+    "credentials_or_database_changed": false,
+    "verification": ["Native Chrome dashboard", "Railway environment status"]
+  },
+  "existing_plan_read": {
+    "plan_id": "b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa",
+    "input_digest": "d6a6aa340254f026ae0a5aae58d020a6bcd765a6d8da3e635e4fc11ebe081bab",
+    "mode": "simulation",
+    "state": "APPROVED",
+    "preexisting_approval_at": "2026-10-29T01:46:27.954Z",
+    "delivery_state": "DRAFT",
+    "attempts": 0,
+    "receipt_present": false,
+    "approval_created_by_this_recovery": false
+  },
+  "publishing_called": false,
+  "publishing_configuration_changed": false,
+  "paid_model_called": false,
+  "new_services_or_keys": false
+}
