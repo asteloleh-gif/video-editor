@@ -1,8 +1,9 @@
 {
   "date_local": "2026-10-29",
   "timezone": "America/Chicago",
-  "result": "PASS_THROUGH_PRIVATE_HUB_DRAFT",
-  "new_mp4_server_fetch": "PENDING_OWNER_MEDIA_ACCESS_CONSENT",
+  "result": "PASS_EXISTING_MATERIALS_TO_SERVER_VERIFIED_HUB_REVIEW",
+  "new_mp4_server_fetch": "PASS",
+  "owner_media_access_consent": "Exact new final 10-second MP4 only; no folder or originals",
   "entrypoint": "Installed OpenReel Astel UI",
   "per_story_terminal_render": false,
   "project_id": "b2d6e5cb-2fbb-4491-ad7b-b37560c6b9bc",
@@ -49,8 +50,15 @@
     "input_digest": "09522280bbd536bacd81eb1b070f23dde6744d8604be313e4307da284dfbac71",
     "independent_cloud_read": "PASS",
     "mode": "simulation",
-    "state": "DRAFT",
-    "media_readable": false,
+    "state": "NEEDS_APPROVAL",
+    "media_readable": true,
+    "server_preflight": {
+      "state": "verified",
+      "at_utc": "2026-10-29T18:05:30.049Z",
+      "bytes": 4840107,
+      "mime": "video/mp4",
+      "sha256": "4ffe3b9e82528cd0e40c9ea57660f2222652c8315b665f5f082663a89a4d964b"
+    },
     "approval_present": false,
     "delivery_state": "DRAFT",
     "attempts": 0,
@@ -68,5 +76,6 @@
   "publishing_configuration_changed": false,
   "paid_model_called": false,
   "telegram_resumed": false,
+  "telegram_verified_state": "offline",
   "raw_or_voice_profiles_changed": false
 }
