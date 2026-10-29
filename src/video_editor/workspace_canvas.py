@@ -48,7 +48,9 @@ def snapshot(service):
         card = review_card(service, story["id"])
         card["editorial_reviews"] = [r for r in data["reviews"] if r["story_id"] == story["id"] and r["digest"] == story["digest"]]
         cards.append(card)
-    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "handoffs": records(service), "runtime": health(service), "publishing_enabled": False, "hub_connection": "simulation_only", "local_only": True}
+    from .workspace_discovery import listing, ranked
+    from .workspace_style import listing as styles
+    return {"stories": cards, "assets": data["assets"], "jobs": data["jobs"], "handoffs": records(service), "runtime": health(service), 'discovery':{'watches':listing(service),'ranked':ranked(service)}, 'styles':styles(service), "publishing_enabled": False, "hub_connection": "simulation_only", "local_only": True}
 
 
 def adapt_document(html):
@@ -181,13 +183,29 @@ def create_server(service, port=PORT):
         def do_POST(self):
             if not self.boundary(mutation=True):
                 return self.send(403, {"error": "Owner local session required"})
-            if self.path not in {"/api/astel-workspace/review", "/api/astel-workspace/hub/submit", "/api/astel-workspace/hub/status", "/api/astel-workspace/hub/retry", "/api/astel-workspace/hub/media-access", "/api/astel-workspace/drive/reauthorize"}:
+            if self.path not in {"/api/astel-workspace/review", '/api/astel-workspace/watch', '/api/astel-workspace/correction', '/api/astel-workspace/style/propose', '/api/astel-workspace/style/activate', '/api/astel-workspace/jobs', '/api/astel-workspace/hub/preflight', '/api/astel-workspace/hub/request-review', "/api/astel-workspace/hub/submit", "/api/astel-workspace/hub/status", "/api/astel-workspace/hub/retry", "/api/astel-workspace/hub/media-access", "/api/astel-workspace/drive/reauthorize"}:
                 return self.send(404, {"error": "No publication or Hub mutations"})
             try:
                 size = int(self.headers.get("Content-Length", "0"))
                 if not 0 < size <= 12000 or self.headers.get("Content-Type") != "application/json":
                     raise ValueError("Invalid request size/type")
                 body = json.loads(self.rfile.read(size))
+                if self.path in {'/api/astel-workspace/hub/preflight','/api/astel-workspace/hub/request-review'}:
+                    from .workspace_cloud import prepare, request_review
+                    if not isinstance(body,dict) or set(body)!={'job_id'}:raise ValueError('Select the exact handoff')
+                    return self.send(200,(prepare if self.path.endswith('/preflight') else request_review)(service,body['job_id']))
+                if self.path == '/api/astel-workspace/watch':
+                    from .workspace_discovery import save
+                    return self.send(200, save(service,body))
+                if self.path == '/api/astel-workspace/correction':
+                    from .workspace_style import correction
+                    return self.send(200, correction(service,body))
+                if self.path.startswith('/api/astel-workspace/style/'):
+                    from .workspace_style import propose, activate
+                    return self.send(200, (activate if self.path.endswith('/activate') else propose)(service,body))
+                if self.path == '/api/astel-workspace/jobs':
+                    if not isinstance(body,dict) or body.get('kind') not in {'search','batch','acquire','story','plan'}:raise ValueError('Unsupported workspace intent')
+                    return self.send(200,service.submit(body))
                 if self.path == '/api/astel-workspace/drive/reauthorize':
                     if body != {}: raise ValueError('Unexpected login fields')
                     return self.send(200, authorization.start())

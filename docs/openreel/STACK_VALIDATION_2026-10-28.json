@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-28",
+  "branch": "integration/astel-media-canvas-stack",
+  "openreel_pin": "c9340465e5d37e684cc25bdbe746c4ccd45e165c",
+  "patch_sha256": "1860c5562adb23843259286b11c5586e6a06a4f42ed7591ffd03b0a8fb119973",
+  "test_results": {
+    "python_workspace_story_voice_discovery_handoff": {
+      "passed": 119,
+      "failed": 0
+    },
+    "web_store_import_history": {
+      "passed": 84,
+      "skipped": 4,
+      "failed": 0
+    },
+    "web_autosave": {
+      "passed": 10,
+      "failed": 0
+    },
+    "web_mcp_listener": {
+      "passed": 12,
+      "failed": 0
+    },
+    "desktop_workspace_ipc_mcp": {
+      "passed": 9,
+      "failed": 0
+    },
+    "hub_radar": {
+      "passed": 184,
+      "failed": 0
+    },
+    "telegram_existing": {
+      "passed": 104,
+      "failed": 0
+    },
+    "telegram_new_owner_contracts": {
+      "passed": 2,
+      "failed": 0
+    },
+    "web_typecheck": "PASS",
+    "desktop_typecheck": "PASS",
+    "web_build": "PASS",
+    "desktop_build": "PASS"
+  },
+  "native": {
+    "editable_import": {
+      "tracks_total": 5,
+      "media_clips_total": 5,
+      "overlays_total": 23,
+      "duration_sec": 81.990666,
+      "visible_text_over_video": true
+    },
+    "grouped_undo_redo": true,
+    "idempotent_mcp_replay": true,
+    "after_undo_save_exit_reopen": {
+      "project": {
+        "id": "68b6d03d-3a15-42b8-9a19-5cb1c118e691",
+        "name": "Astel — новая история / склад",
+        "settings": {
+          "width": 1080,
+          "height": 1920,
+          "fps": 30
+        }
+      },
+      "durationSec": 41.024,
+      "trackCount": 1,
+      "clipCount": 1,
+      "mediaCount": 5,
+      "overlayCount": 0
+    },
+    "original_project_restored": true,
+    "remotion_or_3d_visual_parity_claimed": false
+  },
+  "mcp": {
+    "tools": 322,
+    "workspace_tools": [
+      "astel_workspace_list",
+      "astel_workspace_job_status",
+      "astel_workspace_submit",
+      "astel_workspace_cancel",
+      "astel_workspace_resume",
+      "astel_workspace_watch",
+      "astel_workspace_ranked",
+      "astel_workspace_correction",
+      "astel_workspace_style_propose",
+      "astel_workspace_style",
+      "astel_workspace_add_editable"
+    ],
+    "read_ok": true,
+    "stable_wrapper": true,
+    "publishing_called": false,
+    "external_chatgpt_get_editor_state": "PASS",
+    "existing_tunnel_reused": true,
+    "runtime_health_ready": true,
+    "new_key_created": false,
+    "tunnel_login_autostart_installed": false
+  },
+  "runtime": {
+    "launchagent": "us.astel.media-workspace.worker",
+    "tick_sec": 20,
+    "pending_limit": 100,
+    "child_limit": 4,
+    "heavy_concurrency": 1,
+    "disk_reserve_gib": 8,
+    "real_search_recovery_and_supervisor_restart": "PASS",
+    "physical_mac_reboot_tested": false,
+    "retention": "verified duplicate assets only, age >=7 days, durable restore map"
+  },
+  "discovery": {
+    "own_adapter_watch": "PASS: real isolated Commons watch, 2 candidates, second tick retained exactly one job",
+    "test_watch_paused": true,
+    "auto_download_or_publish": false,
+    "growth_requires_two_fresh_observations": true
+  },
+  "planning": {
+    "implemented": true,
+    "local_enabled": false,
+    "cloud_enabled": false,
+    "real_model_calls": 0,
+    "automatic_fact_search": false,
+    "semantic_frame_analysis": false,
+    "facts_and_shot_ranges": "owner supplied",
+    "unknown_model_outcome": "held; no automatic rebilling"
+  },
+  "style": {
+    "implemented": true,
+    "owner_style_activated": false,
+    "version_bound_corrections": true,
+    "compare_and_swap_activation": true,
+    "job_settings_frozen": true,
+    "isolated_render": {
+      "duration_sec": 6.058667,
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "audio": true,
+      "sha256": "4e27e15900d53843e7670390d748c3db4880f9fb07dd8f45492238ae4aa376a2",
+      "controls": "static image / hidden scene title / caption size 64 / source range [5,7]"
+    }
+  },
+  "canvas": {
+    "local_url": "http://127.0.0.1:17531/",
+    "video_duration": 41.024,
+    "video_ready_state": 4,
+    "video_error": null,
+    "viewport_width": 775,
+    "document_scroll_width": 775,
+    "real_mouse_wheel": {
+      "before": 116.5,
+      "delta_y": 400,
+      "after": 516.5
+    },
+    "private_historical_html_changed": false,
+    "physical_signed_telegram_owner_tested": false,
+    "unauthenticated_write_status": 401
+  },
+  "cloud": {
+    "owner_approved_exact_production_rollout": true,
+    "hub": {
+      "pr": 10,
+      "commit": "816b50dc0aa81a2b339de996e1bb0414b53404e3",
+      "deployment": "030c59b8-2570-42a2-8f65-1729b7f44d90",
+      "status": "SUCCESS"
+    },
+    "telegram": {
+      "pr": 35,
+      "commit": "4c05a67177928e82a813df1781e8f33680bc0db6",
+      "deployment": "40a311e7-8463-4589-836c-2a692e20c09f",
+      "status": "SUCCESS"
+    },
+    "deployed_canvas_js_matches": true,
+    "media_preflight": {
+      "actual_server_fetch": true,
+      "bytes": 25369940,
+      "mime": "video/mp4",
+      "sha256": "bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123",
+      "verified_at": "2026-10-29T00:54:08.014Z"
+    },
+    "plan_id": "b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa",
+    "state": "NEEDS_APPROVAL",
+    "mode": "simulation",
+    "publication_approval": false,
+    "delivery_state": "DRAFT",
+    "attempts": 0,
+    "receipt_present": false,
+    "publishing_configuration_changed": false,
+    "new_services_or_keys": false
+  },
+  "preserved": {
+    "amazon_mp4_sha256": "b28298c8b14a8081851e8ea2e5d0bcce77abe3c2463b45e4c04ff06b904694ea",
+    "warehouse_mp4_sha256": "bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123",
+    "mit_notice_exact": true,
+    "original_openreel": true,
+    "opencut_and_old_editor": true,
+    "raw_voice_references": true,
+    "sources_read_only": true,
+    "main_merged": false
+  },
+  "remaining_acceptance": [
+    "Physical signed Telegram owner/phone session",
+    "Physical Mac reboot; process restart already passed",
+    "Kevin/Windows Stage 2 certification",
+    "Owner visual A/B on representative source media"
+  ],
+  "out_of_scope": [
+    "Voice quality improvement / new recordings",
+    "100 full-video load certification",
+    "Owner publication approval / scheduling / publishing",
+    "Paid planner enablement"
+  ]
+}

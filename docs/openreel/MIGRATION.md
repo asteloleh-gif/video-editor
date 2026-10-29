@@ -1,5 +1,7 @@
 # Astel × OpenReel: audited migration, 2026-10-06
 
+Update, 28 October 2026: the historical audit below is preserved. The installed `integration/astel-media-canvas-stack` candidate now has local Voicebox, durable media/story jobs, topic watches, native editable imports, workspace MCP and explicit style candidates. The separately approved existing Hub/Canvas updates are deployed. See the [current KEEP/PORT/REPLACE/DEPRECATE map and setup](MEDIA_WORKSPACE.md), [acceptance checkpoints](IMPLEMENTATION_1_TO_8.md) and [validation](STACK_VALIDATION_2026-10-28.json). Original editor/OpenCut and accepted pilot remain preserved; no production publishing change or unrelated-history merge was made.
+
 OpenReel is a **candidate editor core**, not an activated replacement. The integration branch keeps the current editor, media engine, API, workers, Remotion, learning tables, and OpenCut experiments. No production deployment, publishing configuration, YouTube upload, or Supabase mutation is part of this migration.
 
 ## Provenance and safe repository structure

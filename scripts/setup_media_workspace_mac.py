@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--canvas-package', type=Path, help='Owner-supplied integration ZIP; provenance only, never executed')
     parser.add_argument('--start-canvas', action='store_true', help='Install/start the private local Canvas LaunchAgent')
     parser.add_argument('--start-worker', action='store_true', help='Install/start the persistent job supervisor (also enabled by --start-canvas)')
+    parser.add_argument('--cloud-planner',choices=['unchanged','off','on'],default='unchanged',help='Owner-controlled metered cloud planning; defaults off on first install')
     args = parser.parse_args()
     for source, expected in ((args.canvas_html, '89c0152e696fed0e836029d5c64fe5d63b0afa85e7bf7ac93751a64a53d20ada'), (args.canvas_package, 'cca3c19768f91571d628f304c46983af41e69383a040fd15233b351d4dd6d018')):
         if source and hashlib.sha256(source.read_bytes()).hexdigest() != expected:
@@ -43,15 +44,23 @@ def main():
         fcntl.flock(gate, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         raise SystemExit('A workspace job is active; finish or cancel it before updating the runtime')
+    planner_policy=HOME/'planner-policy.json'
+    if args.cloud_planner!='unchanged' or not planner_policy.exists():
+        if planner_policy.is_symlink():raise SystemExit('Unexpected planner policy symlink; preserving runtime')
+        planner_policy.write_text(json.dumps({'enabled':args.cloud_planner=='on'}));planner_policy.chmod(0o600)
     python = HOME / 'venv/bin/python'
     if not python.exists(): subprocess.run([sys.executable, '-m', 'venv', str(HOME / 'venv')], check=True)
     subprocess.run([str(python), '-m', 'pip', 'install', '--require-hashes', '--no-deps', '-r', str(REPO / 'integration/video-search/requirements-mac.txt')], check=True, stdout=subprocess.DEVNULL)
     module = HOME / 'src/video_editor'; module.mkdir(parents=True, exist_ok=True)
-    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'workspace_runtime.py', 'hub_delivery.py', 'drive_delivery.py', 'drive_authorization.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
+    for name in ('__init__.py', 'media_workspace.py', 'story_workspace.py', 'canvas_contract.py', 'workspace_canvas.py', 'workspace_runtime.py', 'workspace_discovery.py', 'workspace_style.py', 'workspace_cloud.py', 'workspace_control.py', 'workspace_planner.py', 'hub_delivery.py', 'drive_delivery.py', 'drive_authorization.py', 'story_jobs.py', 'video_search.py', 'transcript.py'):
         source = REPO / 'src/video_editor' / name
         temporary = module / (name + '.install'); shutil.copyfile(source, temporary); temporary.chmod(0o600); temporary.replace(module / name)
     binary = HOME / 'bin/node'; binary.parent.mkdir(exist_ok=True)
     shutil.copy2(Path(args.node).resolve(), binary); binary.chmod(0o700)
+    # Stable MCP entrypoint survives removal of the checkout/task cache. It reads
+    # the candidate's rotating loopback descriptor; no credential is copied.
+    mcp = HOME / 'bin/mcp'
+    shutil.copyfile(REPO / 'scripts/openreel_workspace_mcp_mac.sh', mcp); mcp.chmod(0o700)
     renderer = HOME / 'renderer'; (renderer / 'src').mkdir(parents=True, exist_ok=True)
     for name in ('StoryShortV1.tsx', 'workspace-entry.tsx'):
         shutil.copy2(REPO / 'remotion/src' / name, renderer / 'src' / name)
@@ -69,7 +78,7 @@ def main():
             if hashlib.sha256(source.read_bytes()).hexdigest() != expected: raise SystemExit('Canvas source differs from reviewed version; preserving existing private copy')
             shutil.copyfile(source, canvas / name); (canvas / name).chmod(0o600)
     if args.start_canvas and not (canvas / 'document.html').is_file(): raise SystemExit('Provide the owner Canvas HTML before starting its local view')
-    files = [*module.glob('*.py'), renderer / 'render.cjs', *(renderer / 'src').glob('*.tsx'), canvas / 'workspace.js', canvas / 'workspace.css']
+    files = [*module.glob('*.py'), renderer / 'render.cjs', *(renderer / 'src').glob('*.tsx'), canvas / 'workspace.js', canvas / 'workspace.css', mcp]
     hashes = {str(file.relative_to(HOME)): hashlib.sha256(file.read_bytes()).hexdigest() for file in sorted(files)}
     (HOME / 'install.json').write_text(json.dumps({'version': 1, 'remotion': '4.0.529', 'files': hashes, 'local_only': True, 'publishing_enabled': False}, indent=2))
     domain = f'gui/{os.getuid()}'

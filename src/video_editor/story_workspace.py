@@ -35,6 +35,8 @@ def build_story(service, job_id, payload, descriptors):
         commit_story(service, job_id, json.loads((folder / "props.json").read_text())["story"], payload)
         return
     parent = service.parent_story(payload) if "parent_story_id" in payload else None
+    from .workspace_planner import choices
+    plan=choices(service,payload)
     assets = [service.asset(key) for key in payload["asset_ids"]]
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", payload["script"]) if p.strip()]
     scenes = []; audio_segments = []; cursor = 0; fps = 30
@@ -68,7 +70,9 @@ def build_story(service, job_id, payload, descriptors):
             # audio samples, never guessed words-per-second or fabricated ASR.
             padded_samples = frames * (params[2] // fps)
             audio_segments.append((params, wav.readframes(samples) + b"\0" * ((padded_samples - samples) * params[0] * params[1])))
-        asset = assets[index % len(assets)]; media = service.file_receipt(asset["id"])
+        choice=plan['proposal']['scenes'][index] if plan else None
+        asset = service.asset(choice['asset_id']) if choice else assets[index % len(assets)]
+        media = service.file_receipt(asset["id"])
         name = f"asset-{asset['id']}" + Path(media["path"]).suffix
         target = public / name
         if not target.exists(): shutil.copyfile(media["path"], target)
@@ -77,7 +81,8 @@ def build_story(service, job_id, payload, descriptors):
         scenes.append({"id": f"scene-{index + 1}", "title": text.split(".", 1)[0][:100], "text": text,
                        "from": cursor, "durationInFrames": frames, "src": name, "kind": asset["kind"], "sourceDuration": asset["duration"],
                        "author": asset.get("author") or "", "license": asset.get("license") or "", "sourceUrl": asset.get("source_url") or "",
-                       "asset_id": asset["id"], "asset_sha256": asset["sha256"], "voice_job_id": voice_id})
+                       "asset_id": asset["id"], "asset_sha256": asset["sha256"], 'media_sha256':media['sha256'], "voice_job_id": voice_id})
+        if choice:scenes[-1].update(source_start=choice['source_start'],source_end=choice['source_end'],evidence=choice['evidence'],fact_ids=choice['fact_ids'])
         cursor += frames
     if any(params != audio_segments[0][0] for params, _ in audio_segments):
         raise ValueError("Voice scene formats differ")
@@ -95,6 +100,8 @@ def build_story(service, job_id, payload, descriptors):
     story = {"schemaVersion": 1, "id": job_id, "root_id": parent.get("root_id", parent["id"]) if parent else job_id, "revision": revision, "title": payload["title"], "project_id": payload["project_id"], "profile": payload["profile"], "script": payload["script"],
              "fps": fps, "durationInFrames": cursor + 90, "audioSrc": "narration.wav", "audio_sha256": digest(narration), "scenes": scenes,
              "captions": captions, "caption_review": "asr_draft", "status": "rendering", "created_at": timestamp(), "publishing": "review_only"}
+    story['style'] = payload.get('_style', {'id':None, 'digest':None, 'settings':{'image_motion':'gentle','title_mode':'scene','caption_size':52}})
+    if plan:story['planning']={'id':plan['id'],'digest':plan['digest'],'facts':plan['facts'],'review':'owner_edited_draft'}
     write(folder / "props.json", {"story": story})
     service.update(job_id, progress=.55, phase="Сборка новой истории")
     service.process(job_id, [str(service.home / "bin/node"), str(service.home / "renderer/render.cjs")], timeout=3600,

@@ -2,7 +2,7 @@
 
 ## Astel materials and new stories
 
-The Mac candidate now includes **AI Generate → Материалы и истории**: a durable local library, Commons acquisition, topic batches, a pasted script → existing Voicebox → real ASR timing → generic Remotion MP4 workflow, and versioned review-card export. The owner's existing Canvas now has a private Mac preparation view with real videos and persistent editorial remarks. See [setup, architecture and the remaining cloud delivery/Hub gates](docs/openreel/MEDIA_WORKSPACE.md). Reviewing or exporting a card does not submit or approve publishing.
+The installed Mac candidate now includes **AI Generate → Материалы и истории**: a persistent library and topic watches, existing Voicebox, local ASR, Remotion MP4 assembly, editable native timeline import and version-bound corrections/style candidates. The existing Hub and Telegram Canvas updates are deployed; the server fetched and verified the complete test MP4, now `NEEDS_APPROVAL` with zero delivery attempts. Paid AI planning stays OFF. See [setup and architecture](docs/openreel/MEDIA_WORKSPACE.md), [items 1–8 and acceptance limits](docs/openreel/IMPLEMENTATION_1_TO_8.md), and [current validation](docs/openreel/STACK_VALIDATION_2026-10-28.json). Reviewing a draft does not authorize publishing.
 
 ## Voicebox local voice pilot
 
@@ -16,11 +16,11 @@ The installed candidate includes **AI Generate → Найти видео**: YouT
 
 ## Topic-to-video pilot
 
-A local Amazon story pilot now exercises reviewed source acquisition, the existing personal Voicebox profile, local ASR scene timing/caption review and a deterministic Remotion render. See [pilot evidence and replay instructions](docs/story-pilot/README.md). The completed MP4 is imported into a separate OpenReel review project; the automated Hub round trip remains a next step.
+A local Amazon story pilot exercises reviewed source acquisition, the existing personal Voicebox profile, local ASR scene timing/caption review and a deterministic Remotion render. See [pilot evidence and replay instructions](docs/story-pilot/README.md). Its accepted MP4 is preserved; the subsequent warehouse story proves the [server media/review handoff](docs/openreel/HUB_DELIVERY.md).
 
 ## OpenReel integration candidate — Mac first
 
-Original audit and implementation order: [project audit and roadmap, 28 October 2026](docs/openreel/PROJECT_AUDIT_AND_ROADMAP_2026-10-28.md). The [media workspace implementation](docs/openreel/MEDIA_WORKSPACE.md) advances the local library and new-story path; the real Canvas/media-delivery bridge remains a separate open acceptance gate.
+Original audit and implementation order: [project audit and roadmap, 28 October 2026](docs/openreel/PROJECT_AUDIT_AND_ROADMAP_2026-10-28.md). The [current implementation](docs/openreel/IMPLEMENTATION_1_TO_8.md) records what is installed, deployed and actually tested, including the remaining physical Telegram-owner and Kevin checks.
 
 The integration branch preserves this Astel engine and editor while evaluating a pinned OpenReel core. Start with [Mac setup](docs/openreel/MAC_SETUP.md), [architecture and migration map](docs/openreel/MIGRATION.md), and [validation results](docs/openreel/VALIDATION.md). AstelFam, Remotion, OLEH_STYLE learning and local/remote workers remain separate Astel layers. OpenCut is retained until real-media A/B passes.
 

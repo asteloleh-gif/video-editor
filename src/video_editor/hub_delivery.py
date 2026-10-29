@@ -130,10 +130,11 @@ def save(service, value):
         db.execute("UPDATE hub_handoffs SET data=? WHERE job_id=?", (json.dumps(value, ensure_ascii=False), value["job_id"]))
 
 
-def verified_plan(value, plan):
+def verified_plan(value, plan, *, reviewed=False):
     if plan.get("id") != value["expected_plan_id"] or plan.get("digest") != value["input_digest"] or canonical_hash(plan.get("input")) != value["input_digest"]:
         raise DeliveryError("HUB_PLAN_IDENTITY_MISMATCH")
-    if plan["input"]["mode"] != "simulation" or plan.get('state') != 'DRAFT' or plan.get("approval") or any(d.get("attempts") or d.get("receipt") for d in plan.get("deliveries", [])):
+    states={'DRAFT','NEEDS_APPROVAL','APPROVED'} if reviewed else {'DRAFT'}
+    if plan["input"]["mode"] != "simulation" or plan.get('state') not in states or (plan.get("approval") and (not reviewed or plan['approval'].get('digest')!=plan['digest'])) or any(d.get("attempts") or d.get("receipt") for d in plan.get("deliveries", [])):
         raise DeliveryError("UNEXPECTED_HUB_EXECUTION_STATE")
     return plan
 
@@ -177,7 +178,7 @@ def perform(service, job_id, payload, *, drive=None, hub=None):
 
 
 def public(value):
-    return {**{k: value[k] for k in ("job_id", "story_id", "story_digest", "artifact_sha256", "revision", "input_digest", "expected_plan_id", "submitted", "state", "media_ready", "publication_approved")}, "hub_state": value.get("plan", {}).get("state")}
+    return {**{k: value[k] for k in ("job_id", "story_id", "story_digest", "artifact_sha256", "revision", "input_digest", "expected_plan_id", "submitted", "state", "media_ready", "publication_approved")}, "hub_state": value.get("plan", {}).get("state"), 'server_preflight':value.get('server_preflight')}
 
 
 def records(service):
@@ -189,8 +190,9 @@ def refresh(service, job_id, hub=None):
     initialize(service)
     with service.db() as db: row = db.execute("SELECT data FROM hub_handoffs WHERE job_id=?", (job_id,)).fetchone()
     if row is None: raise DeliveryError("HANDOFF_NOT_FOUND")
-    value = json.loads(row[0]); plan = verified_plan(value, (hub or HubClient(readonly=True)).read("status", planId=value["expected_plan_id"]))
+    value = json.loads(row[0]); plan = verified_plan(value, (hub or HubClient(readonly=True)).read("status", planId=value["expected_plan_id"]),reviewed=(service.folder(job_id)/'cloud-review.json').is_file())
     value.update(submitted=True, state="received", plan=plan); save(service, value)
+    service.update(job_id,result=public(value))
     return {**public(value), "plan": plan}
 
 

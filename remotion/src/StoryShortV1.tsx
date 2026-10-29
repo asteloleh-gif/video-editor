@@ -4,33 +4,34 @@ import {Audio, Video} from '@remotion/media';
 
 export type WorkspaceStory = {
   id: string; title: string; durationInFrames: number; audioSrc: string;
-  scenes: {id: string; title: string; from: number; durationInFrames: number; src: string; kind: string; sourceDuration: number; author: string; license: string}[];
+  style?: {settings: {image_motion: 'gentle' | 'static'; title_mode: 'scene' | 'none'; caption_size: number}};
+  scenes: {id: string; title: string; from: number; durationInFrames: number; src: string; kind: string; sourceDuration: number; author: string; license: string; source_start?:number;source_end?:number}[];
   captions: {start: number; end: number; text: string}[];
 };
 type Props = {story: WorkspaceStory};
 
-const Scene = ({scene, number}: {scene: WorkspaceStory['scenes'][number]; number: number}) => {
+const Scene = ({scene, number, style}: {scene: WorkspaceStory['scenes'][number]; number: number; style: WorkspaceStory['style']}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const scale = interpolate(frame, [0, scene.durationInFrames], [1.01, 1.055], {extrapolateRight: 'clamp'});
+  const scale = style?.settings.image_motion === 'static' ? 1 : interpolate(frame, [0, scene.durationInFrames], [1.01, 1.055], {extrapolateRight: 'clamp'});
   return <AbsoluteFill style={{background: '#10271F', overflow: 'hidden'}}>
     {scene.src && (scene.kind === 'video'
-      ? <Loop durationInFrames={Math.max(1, Math.floor(scene.sourceDuration * fps))}><Video src={staticFile(scene.src)} muted objectFit="cover" style={{width: '100%', height: '100%'}} /></Loop>
+      ? <Loop durationInFrames={Math.max(1, Math.floor(((scene.source_end??scene.sourceDuration)-(scene.source_start??0)) * fps))}><Video src={staticFile(scene.src)} trimBefore={Math.round((scene.source_start??0)*fps)} trimAfter={scene.source_end===undefined?undefined:Math.round(scene.source_end*fps)} muted objectFit="cover" style={{width: '100%', height: '100%'}} /></Loop>
       : <CanvasImage src={staticFile(scene.src)} style={{width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale})`}} />)}
     <AbsoluteFill style={{background: 'linear-gradient(180deg,rgba(5,20,15,.88),rgba(5,20,15,.05) 45%,rgba(5,20,15,.95))'}} />
     <div style={{position: 'absolute', top: 136, left: 76, right: 76, color: '#F7F5E7'}}>
       <div style={{fontSize: 28, letterSpacing: 4, color: '#BEE5CB'}}>ASTEL / {String(number).padStart(2, '0')}</div>
-      <div style={{marginTop: 34, fontSize: 72, lineHeight: 1.1, fontWeight: 800, textWrap: 'balance', opacity: interpolate(frame, [0, 9], [0, 1], {extrapolateRight: 'clamp'})}}>{scene.title}</div>
+      {style?.settings.title_mode !== 'none' && <div style={{marginTop: 34, fontSize: 72, lineHeight: 1.1, fontWeight: 800, textWrap: 'balance', opacity: interpolate(frame, [0, 9], [0, 1], {extrapolateRight: 'clamp'})}}>{scene.title}</div>}
     </div>
     <div style={{position: 'absolute', left: 76, right: 76, bottom: 65, color: '#D6E0D7', fontSize: 22, lineHeight: 1.4}}>{scene.author} · {scene.license}</div>
   </AbsoluteFill>;
 };
 
-const Captions = ({items}: {items: WorkspaceStory['captions']}) => {
+const Captions = ({items, size=52}: {items: WorkspaceStory['captions']; size?: number}) => {
   const frame = useCurrentFrame(); const {fps} = useVideoConfig();
   const item = items.find(cue => frame / fps >= cue.start && frame / fps < cue.end);
   if (!item) return null;
-  return <div style={{position: 'absolute', left: 68, right: 68, bottom: 190, padding: '22px 28px', borderRadius: 20, background: 'rgba(5,20,15,.9)', color: '#FFFCEF', fontSize: 52, fontWeight: 600, textAlign: 'center', lineHeight: 1.22, textWrap: 'balance'}}>{item.text}</div>;
+  return <div style={{position: 'absolute', left: 68, right: 68, bottom: 190, padding: '22px 28px', borderRadius: 20, background: 'rgba(5,20,15,.9)', color: '#FFFCEF', fontSize: size, fontWeight: 600, textAlign: 'center', lineHeight: 1.22, textWrap: 'balance'}}>{item.text}</div>;
 };
 
 export const StoryShortV1 = ({story}: Props) => {
@@ -38,8 +39,8 @@ export const StoryShortV1 = ({story}: Props) => {
   const narrationFrames = last ? last.from + last.durationInFrames : 90;
   return <AbsoluteFill style={{background: '#10271F', fontFamily: 'Arial, Helvetica, sans-serif'}}>
     {story.audioSrc && <Audio src={staticFile(story.audioSrc)} />}
-    {story.scenes.map((scene, index) => <Sequence key={scene.id} name={scene.title} from={scene.from} durationInFrames={scene.durationInFrames} premountFor={30}><Scene scene={scene} number={index + 1} /></Sequence>)}
-    <Captions items={story.captions} />
+    {story.scenes.map((scene, index) => <Sequence key={scene.id} name={scene.title} from={scene.from} durationInFrames={scene.durationInFrames} premountFor={30}><Scene scene={scene} number={index + 1} style={story.style} /></Sequence>)}
+    <Captions items={story.captions} size={story.style?.settings.caption_size} />
     <Sequence from={narrationFrames} durationInFrames={90} name="Источники">
       <AbsoluteFill style={{padding: '160px 76px', color: '#10271F', background: '#EBCB83'}}>
         <div style={{fontSize: 30, letterSpacing: 3}}>ASTEL / ИСТОЧНИКИ</div>

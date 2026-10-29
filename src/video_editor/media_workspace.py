@@ -152,9 +152,13 @@ class Workspace:
         if not isinstance(request, dict) or set(request) != {"id", "kind", "payload"}:
             raise ValueError("Invalid request")
         job_id = identifier(request["id"]); kind = request["kind"]; payload = request["payload"]
-        if kind not in {"search", "batch", "acquire", "story", "handoff"} or not isinstance(payload, dict):
+        if kind not in {"search", "batch", "acquire", "story", "handoff",'plan'} or not isinstance(payload, dict):
             raise ValueError("Invalid job kind")
         expected = fingerprint({"kind": kind, "payload": payload})
+        style = None
+        if kind == 'story':
+            from .workspace_style import current
+            style = current(self)
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT request_hash FROM jobs WHERE id=?", (job_id,)).fetchone()
@@ -164,13 +168,18 @@ class Workspace:
                 if db.execute("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running')").fetchone()[0] >= MAX_PENDING_JOBS:
                     raise ValueError("Queue contains 100 unfinished jobs; finish or cancel one before adding more")
                 self.validate(kind, payload)
+                if kind == 'story':
+                    payload = {**payload, '_style': style}
                 self.folder(job_id).mkdir(mode=0o700)
                 db.execute("INSERT INTO jobs VALUES(?,?,?,?,?,?,?,?,?,?,?)", (job_id, kind, expected, json.dumps(payload, ensure_ascii=False), "queued", 0, "В очереди", None, "{}", timestamp(), timestamp()))
         self.spawn(job_id)
         return self.status(job_id)
 
     def validate(self, kind, payload):
-        if kind in {"search", "batch"}:
+        if kind=='plan':
+            from .workspace_planner import validate
+            validate(self,payload)
+        elif kind in {"search", "batch"}:
             expected = {"query", "providers"} if kind == "search" else {"topics", "providers"}
             if set(payload) != expected or not isinstance(payload["providers"], list) or not 1 <= len(payload["providers"]) <= 2 or any(p not in ("youtube", "commons") for p in payload["providers"]):
                 raise ValueError("Choose supported sources")
@@ -186,7 +195,7 @@ class Workspace:
             validate(self, payload)
         else:
             required = {"title", "script", "asset_ids", "profile", "project_id"}
-            if not required <= set(payload) or set(payload) - required - {"parent_story_id", "parent_digest"}:
+            if not required <= set(payload) or set(payload) - required - {"parent_story_id", "parent_digest",'plan_id','plan_digest'}:
                 raise ValueError("Invalid story settings")
             if ("parent_story_id" in payload) != ("parent_digest" in payload):
                 raise ValueError("Revision identity is incomplete")
@@ -201,6 +210,9 @@ class Workspace:
                 raise ValueError("Select 1–12 library files and open a project")
             for asset_id in payload["asset_ids"]:
                 self.asset(asset_id)
+            if ('plan_id' in payload)!=('plan_digest' in payload):raise ValueError('Planning identity is incomplete')
+            from .workspace_planner import choices
+            choices(self,payload)
 
     def story(self, story_id):
         with self.db() as db:
@@ -249,13 +261,22 @@ class Workspace:
             raise InterruptedError("Cancelled")
 
     def cancel(self, job_id):
-        status = self.status(job_id)['status']
-        if status not in END:
+        current = self.status(job_id)
+        if current['status'] not in END:
+            if current['kind']=='handoff':
+                with self.db() as db:
+                    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='hub_handoffs'").fetchone():
+                        row=db.execute('SELECT data FROM hub_handoffs WHERE job_id=?',(job_id,)).fetchone()
+                        if row and json.loads(row[0]).get('state') in {'submitting','received','remote_outcome_unconfirmed'}:
+                            raise ValueError('Hub may already have accepted this draft; check its exact status before another local action')
             (self.folder(job_id) / "cancel").touch(mode=0o600)
-            if status == 'queued':
-                self.update(job_id, status='cancelled', phase='Остановлено')
-            else:
-                self.spawn(job_id)
+            try:
+                with lock(self.folder(job_id)/'run.lock',True):
+                    # Only an intent with no owning child can finish instantly.
+                    # A queued child may already be waiting at the global gate.
+                    if self.status(job_id)['status']=='queued':self.update(job_id,status='cancelled',phase='Остановлено')
+            except BlockingIOError:pass
+            self.spawn(job_id)
         return self.status(job_id)
 
     def worker(self, job_id, inherited_fd):
@@ -284,6 +305,9 @@ class Workspace:
                     elif kind == "handoff":
                         from .hub_delivery import perform
                         perform(self, job_id, payload)
+                    elif kind=='plan':
+                        from .workspace_planner import perform
+                        perform(self,job_id,payload)
                     else:
                         from .story_workspace import build_story
                         build_story(self, job_id, payload, (handle.fileno(), gate.fileno()))
@@ -354,6 +378,7 @@ class Workspace:
             self.update(job_id, result={"search_ids": runs, "completed_topics": len(runs), "total_topics": len(topics)})
 
     def listing(self):
+        from .workspace_planner import policy
         with self.db() as db:
             job_ids = [r[0] for r in db.execute("SELECT id FROM jobs ORDER BY created_at DESC LIMIT 30")]
             search_rows = db.execute("SELECT * FROM searches ORDER BY created_at DESC LIMIT 20").fetchall()
@@ -362,7 +387,7 @@ class Workspace:
             reviews = [dict(r) for r in db.execute("SELECT * FROM reviews ORDER BY created_at DESC LIMIT 50")]
         return {"jobs": [self.status(key) for key in job_ids], "searches": [{"id": r["id"], "query": r["query"], "created_at": r["created_at"], "errors": json.loads(r["errors"]), "candidates": [self.candidate(key, True) for key in json.loads(r["results"])]} for r in search_rows],
                 "assets": [self.public_asset(a) for a in assets], "stories": stories, "reviews": reviews,
-                "disk_free_bytes": shutil.disk_usage(self.home).free, "publishing_enabled": False}
+                'planning':policy(self), "disk_free_bytes": shutil.disk_usage(self.home).free, "publishing_enabled": False}
 
     def public_asset(self, asset):
         return {k: v for k, v in asset.items() if k not in {"original_path", "media_path"}}
@@ -500,7 +525,7 @@ class Workspace:
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["list", "submit", "resume", "cancel", "file", "video", "card", "import", "worker", "asr"])
+    parser.add_argument("command", choices=["list", "submit", "resume", "cancel", "file", "video", "card", "import", "worker", "asr",'control','editable','narration'])
     parser.add_argument("--id"); parser.add_argument("--lock-fd", type=int)
     args = parser.parse_args(); service = Workspace()
     if args.command == "worker":
@@ -512,7 +537,10 @@ def main():
             request = json.loads(db.execute("SELECT payload FROM jobs WHERE id=?", (args.id,)).fetchone()[0])
         result = transcribe_video(folder / "public/narration.wav", language="ru" if request["profile"] == "oleh-ru" else "en", max_len=38)
         write(folder / "transcript.json", {**result.to_dict(), "audio_sha256": digest(folder / "public/narration.wav")}); return
-    if args.command == "list": result = service.listing()
+    if args.command in {'control','editable','narration'}:
+        from .workspace_control import execute, editable, narration
+        result=execute(service,json.loads(sys.stdin.read(50000))) if args.command=='control' else (editable if args.command=='editable' else narration)(service,identifier(args.id))
+    elif args.command == "list": result = service.listing()
     elif args.command == "submit": result = service.submit(json.loads(sys.stdin.read(50000)))
     elif args.command == "import": result = service.import_local(json.loads(sys.stdin.read(8192))["path"])
     elif args.command == "file": result = service.file_receipt(args.id)

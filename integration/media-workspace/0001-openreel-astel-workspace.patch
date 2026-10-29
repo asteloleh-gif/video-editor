@@ -64,10 +64,10 @@ index 0000000..41ea813
 +});
 diff --git a/apps/desktop/src/main/ipc/media-workspace.ts b/apps/desktop/src/main/ipc/media-workspace.ts
 new file mode 100644
-index 0000000..8b4e267
+index 0000000..35afe21
 --- /dev/null
 +++ b/apps/desktop/src/main/ipc/media-workspace.ts
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,57 @@
 +import {spawn} from "node:child_process";
 +import {createHash} from "node:crypto";
 +import {readFile, realpath, stat} from "node:fs/promises";
@@ -101,7 +101,7 @@ index 0000000..8b4e267
 +    child.stdin.on("error", () => {}); child.stdin.end(request === undefined ? "" : JSON.stringify(request));
 +  });
 +}
-+export async function readWorkspaceBytes(command: "file" | "video", id: string): Promise<ArrayBuffer> {
++export async function readWorkspaceBytes(command: "file" | "video" | 'narration', id: string): Promise<ArrayBuffer> {
 +  const result = await runWorkspace(command, id) as {path: string; sha256: string};
 +  const root = path.join(home, command === "file" ? "assets" : "jobs", id) + path.sep;
 +  if (!result.path.startsWith(root) || await realpath(result.path) !== result.path || (await stat(result.path)).size > 300 * 1024 * 1024) throw new Error(message);
@@ -110,6 +110,8 @@ index 0000000..8b4e267
 +  return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 +}
 +export function registerWorkspaceHandlers(): void {
++  handle(CHANNELS.workspaceEditable, voiceboxJobSchema, ({id}) => runWorkspace('editable',id));
++  handle(CHANNELS.workspaceNarration, voiceboxJobSchema, ({id}) => readWorkspaceBytes('narration',id));
 +  handle(CHANNELS.workspaceCanvas, z.undefined(), () => shell.openExternal("http://127.0.0.1:17531/"));
 +  handle(CHANNELS.workspaceCard, voiceboxJobSchema, ({id}) => runWorkspace("card", id));
 +  handle(CHANNELS.workspaceList, z.undefined(), () => runWorkspace("list"));
@@ -400,15 +402,133 @@ index 0000000..80e6a30
 +  handle(CHANNELS.voiceboxCancel, voiceboxJobSchema, ({ id }) => runVoicebox("cancel", id));
 +  handle(CHANNELS.voiceboxAudio, voiceboxJobSchema, ({ id }) => readVoiceboxAudio(id));
 +}
+diff --git a/apps/desktop/src/main/mcp/renderer-bridge.ts b/apps/desktop/src/main/mcp/renderer-bridge.ts
+index 3b54368..4bf0004 100644
+--- a/apps/desktop/src/main/mcp/renderer-bridge.ts
++++ b/apps/desktop/src/main/mcp/renderer-bridge.ts
+@@ -6,6 +6,7 @@ import {
+   type Dispatcher,
+   type BridgeResponse,
+ } from "./dispatcher";
++import {workspaceTools,isWorkspaceTool,workspaceMutation,callWorkspaceTool} from './workspace-tools';
+ 
+ let bridge: Dispatcher | null = null;
+ let responseListener: ((event: unknown, response: BridgeResponse) => void) | null =
+@@ -48,12 +49,22 @@ export function installRendererBridge(): McpToolProvider {
+   return {
+     async listTools(): Promise<McpToolDef[]> {
+       const result = await bridge!.request("listTools", {}, 10_000);
+-      return (result as McpToolDef[]) ?? [];
++      return [...((result as McpToolDef[]) ?? []),...workspaceTools];
+     },
+     async callTool(
+       name: string,
+       args: Record<string, unknown>,
+     ): Promise<McpToolResult> {
++      if(isWorkspaceTool(name)){
++        try{
++          if(workspaceMutation(name)){
++            const permission=await bridge!.request('callTool',{name:'astel_workspace_authorize',args:{}},10_000) as McpToolResult;
++            if(!permission.ok)return permission;
++          }
++          if(name==='astel_workspace_add_editable')return await bridge!.request('callTool',{name,args},120_000) as McpToolResult;
++          return await callWorkspaceTool(name,args);
++        }catch{return {ok:false,summary:'Workspace request rejected',error:{code:'WORKSPACE_REQUEST_REJECTED',message:'Check the typed request, saved job and local workspace service.'}};}
++      }
+       const timeoutMs = LONG_RUNNING_TOOLS.has(name)
+         ? LONG_RUNNING_TIMEOUT_MS
+         : STANDARD_CALL_TIMEOUT_MS;
+diff --git a/apps/desktop/src/main/mcp/workspace-tools.test.ts b/apps/desktop/src/main/mcp/workspace-tools.test.ts
+new file mode 100644
+index 0000000..57d019d
+--- /dev/null
++++ b/apps/desktop/src/main/mcp/workspace-tools.test.ts
+@@ -0,0 +1,17 @@
++import {describe,it,expect,vi} from 'vitest';
++const h=vi.hoisted(()=>({run:vi.fn(async()=>({jobs:[]}))}));
++vi.mock('../ipc/media-workspace',()=>({runWorkspace:h.run}));
++import {workspaceTools,isWorkspaceTool,workspaceMutation,callWorkspaceTool} from './workspace-tools';
++describe('bounded workspace MCP',()=>{
++ it('exposes no owner style activation, generic commands, credentials or publisher',()=>{
++  expect(workspaceTools.length).toBe(11);expect(isWorkspaceTool('astel_workspace_add_editable')).toBe(true);
++  for(const name of ['astel_workspace_publish','astel_workspace_style_activate','shell','distribution_approve'])expect(isWorkspaceTool(name)).toBe(false);
++  expect(workspaceMutation('astel_workspace_list')).toBe(false);expect(workspaceMutation('astel_workspace_submit')).toBe(true);expect(workspaceMutation('astel_workspace_add_editable')).toBe(true);
++ });
++ it('validates requests before fixed Python control transport',async()=>{
++  await callWorkspaceTool('astel_workspace_list',{});expect(h.run).toHaveBeenLastCalledWith('control',undefined,{action:'list',args:{}});
++  const before=h.run.mock.calls.length;
++  for(const args of [{id:'../file'},{id:'11111111-1111-4111-8111-111111111111',path:'/private'},{command:'sh'}])await expect(callWorkspaceTool('astel_workspace_job_status',args)).rejects.toThrow();
++  await expect(callWorkspaceTool('astel_workspace_submit',{id:'11111111-1111-4111-8111-111111111111',kind:'handoff',payload:{}})).rejects.toThrow();expect(h.run.mock.calls.length).toBe(before);
++ });
++});
+diff --git a/apps/desktop/src/main/mcp/workspace-tools.ts b/apps/desktop/src/main/mcp/workspace-tools.ts
+new file mode 100644
+index 0000000..ff7aace
+--- /dev/null
++++ b/apps/desktop/src/main/mcp/workspace-tools.ts
+@@ -0,0 +1,51 @@
++import {z} from 'zod';
++import {workspaceSubmitSchema} from '../../shared/ipc-contract';
++import {runWorkspace} from '../ipc/media-workspace';
++import type {McpToolDef,McpToolResult} from './core';
++const id=z.string().uuid(),sha=z.string().regex(/^[a-f0-9]{64}$/),empty=z.object({}).strict();
++const settings=z.object({image_motion:z.enum(['gentle','static']),title_mode:z.enum(['scene','none']),caption_size:z.number().int().min(44).max(76)}).strict();
++const definitions={
++ astel_workspace_list:{action:'list',schema:empty,read:true,description:'Read the local media catalogue, jobs and stories. No paths or credentials.'},
++ astel_workspace_job_status:{action:'status',schema:z.object({id}).strict(),read:true,description:'Read one durable workspace job by UUID.'},
++ astel_workspace_submit:{action:'submit',schema:workspaceSubmitSchema,read:false,description:'Submit an idempotent bounded search, acquisition or story render. Never publishes.'},
++ astel_workspace_cancel:{action:'cancel',schema:z.object({id}).strict(),read:false,description:'Cancel one local workspace job. Does not cancel a publisher.'},
++ astel_workspace_resume:{action:'resume',schema:z.object({id}).strict(),read:false,description:'Resume an existing unfinished local job; failed jobs stay failed.'},
++ astel_workspace_watch:{action:'watch',schema:z.object({id,query:z.string().min(1).max(200),providers:z.array(z.enum(['commons','youtube'])).min(1).max(2),interval_minutes:z.number().int().min(15).max(10080),enabled:z.boolean()}).strict(),read:false,description:'Save or pause a topic watch. Search only, no automatic media download.'},
++ astel_workspace_ranked:{action:'ranked',schema:z.object({limit:z.number().int().min(1).max(100).optional(),search_id:id.optional()}).strict(),read:true,description:'Rank candidates by measured views per hour. Missing observations remain unknown.'},
++ astel_workspace_correction:{action:'correction',schema:z.object({id,story_id:id,digest:sha,category:z.enum(['voice','editing','captions','sources','motion']),start:z.number().nonnegative(),end:z.number().nonnegative(),note:z.string().min(1).max(2000),suggestion:settings.nullable()}).strict(),read:false,description:'Record a correction against exact story bytes and time range.'},
++ astel_workspace_style_propose:{action:'style_propose',schema:z.object({id,name:z.string().min(1).max(100),correction_ids:z.array(id).min(1).max(30),settings}).strict(),read:false,description:'Propose an immutable style candidate from corrections. Activation is owner UI only.'},
++ astel_workspace_style:{action:'style',schema:empty,read:true,description:'Read active style and its auditable candidate versions.'},
++} as const;
++type Name=keyof typeof definitions;
++// JSON schemas are deliberately bounded and mirror Zod's runtime validation.
++const uuidProperty={type:'string',format:'uuid'};
++const string=(maxLength:number,minLength=1)=>({type:'string',minLength,maxLength});
++const object=(properties:Record<string,unknown>,required=Object.keys(properties))=>({type:'object',additionalProperties:false,properties,required});
++const array=(items:unknown,maxItems:number,minItems=1)=>({type:'array',items,minItems,maxItems});
++const styleProperties={image_motion:{enum:['gentle','static']},title_mode:{enum:['scene','none']},caption_size:{type:'integer',minimum:44,maximum:76}};
++const providerProperty=array({enum:['commons','youtube']},2);
++const storyProperties={title:string(160),script:string(3000),asset_ids:array(uuidProperty,12),profile:{enum:['oleh-ru','oleh-en']},project_id:string(128),parent_story_id:uuidProperty,parent_digest:{type:'string',pattern:'^[a-f0-9]{64}$'},plan_id:uuidProperty,plan_digest:{type:'string',pattern:'^[a-f0-9]{64}$'}};
++const payloads={search:object({query:string(200),providers:providerProperty}),batch:object({topics:array(string(200),100),providers:providerProperty}),acquire:object({candidate_id:uuidProperty}),story:object(storyProperties,['title','script','asset_ids','profile','project_id']),plan:object({topic:string(200),language:{enum:['ru','en']},project_id:string(128),facts:array(object({id:{type:'string',pattern:'^f\\d{1,2}$'},text:string(1000),url:{type:'string',format:'uri',pattern:'^https://'}}),12),shots:array(object({asset_id:uuidProperty,start:{type:'number',minimum:0},end:{type:'number',exclusiveMinimum:0},evidence:string(1000)}),12)})};
++const property=(key:string):unknown=>{
++ if(key==='id'||key.endsWith('_id'))return uuidProperty;
++ if(key==='digest')return {type:'string',pattern:'^[a-f0-9]{64}$'};
++ if(key==='limit')return {type:'integer',minimum:1,maximum:100};
++ if(key==='interval_minutes')return {type:'integer',minimum:15,maximum:10080};
++ if(key==='start'||key==='end')return {type:'number',minimum:0};
++ if(key==='enabled')return {type:'boolean'};
++ if(key==='providers')return providerProperty;
++ if(key==='correction_ids')return array(uuidProperty,30);
++ if(key==='settings')return object(styleProperties);
++ if(key==='suggestion')return {anyOf:[object(styleProperties),{type:'null'}]};
++ if(key==='category')return {enum:['voice','editing','captions','sources','motion']};
++ return string(key==='note'?2000:key==='name'?100:200);
++};
++export const workspaceTools:McpToolDef[]=Object.entries(definitions).map(([name,d])=>({name,description:d.description,inputSchema:name==='astel_workspace_submit'?{type:'object',oneOf:Object.entries(payloads).map(([kind,payload])=>object({id:uuidProperty,kind:{const:kind},payload}))}:object(Object.fromEntries(Object.keys((d.schema as z.AnyZodObject).shape).map(key=>[key,property(key)])),Object.entries((d.schema as z.AnyZodObject).shape).filter(([,value])=>!(value as z.ZodTypeAny).isOptional()).map(([key])=>key))}));
++workspaceTools.push({name:'astel_workspace_add_editable',description:'Add separate scenes, narration and editable text to the bound open project, in one Undo group. Requires trusted local MCP.',inputSchema:{type:'object',additionalProperties:false,required:['id'],properties:{id:uuidProperty}}});
++export function isWorkspaceTool(name:string){return Object.hasOwn(definitions,name)||name==='astel_workspace_add_editable';}
++export function workspaceMutation(name:string){return name==='astel_workspace_add_editable'||(Object.hasOwn(definitions,name)&&!definitions[name as Name].read);}
++export async function callWorkspaceTool(name:string,args:Record<string,unknown>):Promise<McpToolResult>{
++ if(!(Object.hasOwn(definitions,name)))throw Error('Unknown workspace tool');
++ const d=definitions[name as Name],parsed=d.schema.parse(args);
++ const data=await runWorkspace('control',undefined,{action:d.action,args:parsed});return {ok:true,summary:d.description,data};
++}
 diff --git a/apps/desktop/src/preload/index.ts b/apps/desktop/src/preload/index.ts
-index f7f4f2c..5445570 100644
+index f7f4f2c..bdb0421 100644
 --- a/apps/desktop/src/preload/index.ts
 +++ b/apps/desktop/src/preload/index.ts
-@@ -4,6 +4,37 @@ import type { McpBridgeRequest } from "../shared/mcp";
+@@ -4,6 +4,39 @@ import type { McpBridgeRequest } from "../shared/mcp";
  
  contextBridge.exposeInMainWorld("openreel", {
    platform: "desktop",
 +  mediaWorkspace: {
++    editable: (id: string) => ipcRenderer.invoke(CHANNELS.workspaceEditable,{id}),
++    narration: (id: string) => ipcRenderer.invoke(CHANNELS.workspaceNarration,{id}),
 +    openCanvas: () => ipcRenderer.invoke(CHANNELS.workspaceCanvas),
 +    card: (id: string) => ipcRenderer.invoke(CHANNELS.workspaceCard, {id}),
 +    list: () => ipcRenderer.invoke(CHANNELS.workspaceList),
@@ -443,11 +563,13 @@ index f7f4f2c..5445570 100644
    probeHardware: () => ipcRenderer.invoke(CHANNELS.probeHardware, undefined),
    onMenuAction: (cb: (id: string) => void) => {
 diff --git a/apps/desktop/src/shared/channels.ts b/apps/desktop/src/shared/channels.ts
-index ded811d..e00bc15 100644
+index ded811d..a394f72 100644
 --- a/apps/desktop/src/shared/channels.ts
 +++ b/apps/desktop/src/shared/channels.ts
-@@ -1,4 +1,29 @@
+@@ -1,4 +1,31 @@
  export const CHANNELS = {
++  workspaceEditable: 'openreel:workspace:editable',
++  workspaceNarration: 'openreel:workspace:narration',
 +  workspaceCanvas: "openreel:workspace:canvas",
 +  workspaceCard: "openreel:workspace:card",
 +  workspaceList: "openreel:workspace:list",
@@ -477,10 +599,10 @@ index ded811d..e00bc15 100644
    fsShowSaveDialog: "openreel:fs:showSaveDialog",
    fsShowOpenDialog: "openreel:fs:showOpenDialog",
 diff --git a/apps/desktop/src/shared/ipc-contract.ts b/apps/desktop/src/shared/ipc-contract.ts
-index 3870cf7..b375459 100644
+index 3870cf7..cbecbe0 100644
 --- a/apps/desktop/src/shared/ipc-contract.ts
 +++ b/apps/desktop/src/shared/ipc-contract.ts
-@@ -283,3 +283,38 @@ export const audioStreamInfoSchema = z.object({
+@@ -283,3 +283,40 @@ export const audioStreamInfoSchema = z.object({
    language: z.string().optional(),
  });
  export type AudioStreamInfo = z.infer<typeof audioStreamInfoSchema>;
@@ -511,12 +633,14 @@ index 3870cf7..b375459 100644
 +const workspaceTopic = z.string().trim().min(1).max(200).regex(/^[^\x00-\x1f]+$/);
 +const workspaceProviders = z.array(z.enum(["commons", "youtube"])).min(1).max(2);
 +export const workspaceSubmitSchema = z.discriminatedUnion("kind", [
++  z.object({id:z.string().uuid(),kind:z.literal('plan'),payload:z.object({topic:workspaceTopic,language:z.enum(['ru','en']),project_id:z.string().min(1).max(128),facts:z.array(z.object({id:z.string().regex(/^f\d{1,2}$/),text:z.string().min(1).max(1000),url:z.string().url().startsWith('https://')}).strict()).min(1).max(12),shots:z.array(z.object({asset_id:z.string().uuid(),start:z.number().nonnegative(),end:z.number().positive(),evidence:z.string().min(1).max(1000)}).strict()).min(1).max(12)}).strict()}).strict(),
 +  z.object({id: z.string().uuid(), kind: z.literal("search"), payload: z.object({query: workspaceTopic, providers: workspaceProviders}).strict()}).strict(),
 +  z.object({id: z.string().uuid(), kind: z.literal("batch"), payload: z.object({topics: z.array(workspaceTopic).min(1).max(100), providers: workspaceProviders}).strict()}).strict(),
 +  z.object({id: z.string().uuid(), kind: z.literal("acquire"), payload: z.object({candidate_id: z.string().uuid()}).strict()}).strict(),
 +  z.object({id: z.string().uuid(), kind: z.literal("story"), payload: z.object({
 +    title: z.string().trim().min(1).max(160), script: z.string().trim().min(1).max(3000), asset_ids: z.array(z.string().uuid()).min(1).max(12),
 +    profile: z.enum(["oleh-ru", "oleh-en"]), project_id: z.string().min(1).max(128), parent_story_id: z.string().uuid().optional(), parent_digest: z.string().regex(/^[a-f0-9]{64}$/).optional(),
++    plan_id:z.string().uuid().optional(),plan_digest:z.string().regex(/^[a-f0-9]{64}$/).optional(),
 +  }).strict()}).strict(),
 +]);
 diff --git a/apps/web/src/components/editor/AIGenTab.tsx b/apps/web/src/components/editor/AIGenTab.tsx
@@ -589,14 +713,15 @@ index d2f62a9..e556390 100644
              icon={Mic}
 diff --git a/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx b/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx
 new file mode 100644
-index 0000000..65bdce9
+index 0000000..3ce48cc
 --- /dev/null
 +++ b/apps/web/src/components/editor/inspector/MediaWorkspacePanel.tsx
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,192 @@
 +import React, {useEffect, useRef, useState} from "react";
 +import type {WorkspaceAsset, WorkspaceSnapshot, WorkspaceSubmit, WorkspaceStory} from "../../../types/global";
 +import {useProjectStore} from "../../../stores/project-store";
 +import {addStoryToTimeline} from "./story-timeline";
++import {addEditableWorkspaceStory} from './workspace-editable';
 +
 +const initial: WorkspaceSnapshot = {jobs: [], searches: [], assets: [], stories: [], reviews: [], disk_free_bytes: 0, publishing_enabled: false};
 +const control = "w-full bg-background-secondary border border-border rounded p-2 text-sm";
@@ -622,6 +747,10 @@ index 0000000..65bdce9
 +  const [tab, setTab] = useState("library");
 +  const [query, setQuery] = useState(draft.query || "");
 +  const [topics, setTopics] = useState(draft.topics || "");
++  const [factsText,setFactsText]=useState(()=>{try{return (localStorage.getItem('astel-workspace-facts-v1')||'').slice(0,15000);}catch{return '';}});
++  useEffect(()=>{try{localStorage.setItem('astel-workspace-facts-v1',factsText);}catch{setError('Факты не сохранились локально.');}},[factsText]);
++  const [shotNotes,setShotNotes]=useState<Record<string,{start:number;end:number;evidence:string}>>({});
++  const [planning,setPlanning]=useState<{id:string;digest:string}|null>(null);
 +  const [provider, setProvider] = useState("commons");
 +  const [title, setTitle] = useState(draft.title || "");
 +  const [script, setScript] = useState(draft.script || "");
@@ -700,6 +829,7 @@ index 0000000..65bdce9
 +      await addStoryToTimeline({id: story.id, project_id: story.project_id, package_id: "story-v1", revision: String(story.revision), status: "ready", progress: 1, created_at: story.created_at, updated_at: story.created_at}, blob);
 +    } catch (e) {setError(e instanceof Error ? e.message : "Ошибка импорта ролика.");} finally {setBusy(false);}
 +  };
++  const addEditable=async()=>{if(!story||!api)return;setBusy(true);setError('');try{const manifest=await api.editable(story.id);await addEditableWorkspaceStory(manifest,api);}catch(e){setError(e instanceof Error?e.message:'Не удалось добавить дорожки.');}finally{setBusy(false);}};
 +  const exportCard = async () => {
 +    if (!api || !story || !window.openreel) return;
 +    setBusy(true); setError("");
@@ -725,7 +855,7 @@ index 0000000..65bdce9
 +  const latest = snapshot.searches.find(item => item.id === activeSearch) ?? snapshot.searches[0];
 +  return <section className="space-y-4 text-sm" aria-label="Материалы и истории">
 +    <h3 className="font-bold">Материалы и истории</h3>
-+    <div className="flex flex-wrap gap-1">{[["library", "Библиотека"], ["story", "Новая история"], ["batch", "Темы"], ["review", "Для Canvas"]].map(([id, label]) => <button key={id} className={button} aria-pressed={tab === id} onClick={() => setTab(id)}>{label}</button>)}</div>
++    <div className="flex flex-wrap gap-1">{[["library", "Библиотека"], ['planner','Сценарий'], ["story", "Новая история"], ["batch", "Темы"], ["review", "Для Canvas"]].map(([id, label]) => <button key={id} className={button} aria-pressed={tab === id} onClick={() => setTab(id)}>{label}</button>)}</div>
 +    {tab === "library" && <div className="space-y-3">
 +      <label className="block">Тема<input aria-label="Тема материалов" className={control} value={query} onChange={e => setQuery(e.target.value)} maxLength={200} /></label>
 +      <label className="block">Источник<select aria-label="Источник материалов" className={control} value={provider} onChange={e => setProvider(e.target.value)}><option value="commons">Commons · файлы</option><option value="youtube">YouTube · референсы</option><option value="both">Оба источника</option></select></label>
@@ -745,13 +875,24 @@ index 0000000..65bdce9
 +      <p className="text-xs text-text-secondary">Выберите файлы для новой истории. Оригиналы сохраняются отдельно от подготовленных копий. Свободно: {(snapshot.disk_free_bytes / 1024 ** 3).toFixed(1)} GiB.</p>
 +    </div>}
 +    {tab === "story" && <div className="space-y-3">
++      {planning&&<p className="text-xs">Сценарный план привязан к выбранным фрагментам. Сохраняйте один абзац на сцену. <button className={button} onClick={()=>setPlanning(null)}>Перейти к ручному подбору</button></p>}
 +      {parent && <button className={button} onClick={() => setParent(null)}>Начать отдельную историю</button>}
 +      <label className="block">Название<input aria-label="Название истории" className={control} value={title} onChange={e => setTitle(e.target.value)} maxLength={160} /></label>
 +      <label className="block">Сценарий<textarea aria-label="Сценарий истории" rows={10} className={control} value={script} onChange={e => setScript(e.target.value)} maxLength={3000} /></label>
 +      <p className="text-xs text-text-secondary">{parent ? `Новая версия: ${parent.revision + 1}. ` : ""}Пустая строка разделяет сцены. Их длительность считается по реальной озвучке. Выбрано файлов: {selected.length}.</p>
 +      <label className="block">Голос<select aria-label="Голос истории" className={control} value={profile} onChange={e => setProfile(e.target.value as typeof profile)}><option value="oleh-ru">Олег · русский / B</option><option value="oleh-en">Oleh · English</option></select></label>
-+      <button className={button} disabled={busy || !title.trim() || !script.trim() || !selected.length} onClick={() => void run("story", {title, script, asset_ids: selected, profile, project_id: projectId, ...(parent ? {parent_story_id: parent.id, parent_digest: parent.digest} : {})})}>Собрать новый черновик</button>
++      <button className={button} disabled={busy || !title.trim() || !script.trim() || !selected.length} onClick={() => void run("story", {title, script, asset_ids: selected, profile, project_id: projectId, ...(planning?{plan_id:planning.id,plan_digest:planning.digest}:{}), ...(parent ? {parent_story_id: parent.id, parent_digest: parent.digest} : {})})}>Собрать новый черновик</button>
 +      <p className="text-xs text-text-secondary">Озвучка и сборка выполняются локально. Автоматические субтитры нужно проверить. Результат ожидает просмотра в Canvas.</p>
++    </div>}
++    {tab==='planner'&&<div className="space-y-3">
++      {!snapshot.planning?.enabled&&<p role="status" className="text-xs">Облачный сценарист сейчас выключен. Поиск, ваш сценарий, локальная озвучка и монтаж работают без него.</p>}
++      <p className="text-xs">Выберите файлы в библиотеке. Укажите проверенные факты с источниками и то, что видно в нужных фрагментах. Облачный помощник подготовит предложение; его можно отредактировать до озвучки. Ключ остаётся на существующем сервере.</p>
++      <label className="block">Тема<input className={control} value={query} onChange={e=>setQuery(e.target.value)} maxLength={200}/></label>
++      <label className="block">Факты · один на строку: факт | https://источник<textarea className={control} rows={6} value={factsText} onChange={e=>setFactsText(e.target.value)} maxLength={15000}/></label>
++      <label className="block">Язык<select className={control} value={profile} onChange={e=>setProfile(e.target.value as typeof profile)}><option value="oleh-ru">Русский</option><option value="oleh-en">English</option></select></label>
++      {snapshot.assets.filter(a=>selected.includes(a.id)).map(asset=>{const shot=shotNotes[asset.id]||{start:0,end:asset.kind==='video'?Math.min(10,asset.duration):5,evidence:''};const update=(v:Partial<typeof shot>)=>setShotNotes(old=>({...old,[asset.id]:{...shot,...v}}));return <div key={asset.id} className="border border-border p-2"><p>{asset.title}</p><label>От, секунд<input type="number" className={control} min={0} step={.1} value={shot.start} onChange={e=>update({start:Number(e.target.value)})}/></label><label>До, секунд<input type="number" className={control} min={.1} step={.1} value={shot.end} onChange={e=>update({end:Number(e.target.value)})}/></label><label>Что видно<textarea className={control} value={shot.evidence} maxLength={1000} onChange={e=>update({evidence:e.target.value})}/></label></div>;})}
++      <button className={button} disabled={busy||!snapshot.planning?.enabled||!query.trim()||!factsText.trim()||!selected.length} onClick={()=>{try{const facts=factsText.split('\n').filter(x=>x.trim()).map((line,index)=>{const split=line.lastIndexOf('|');if(split<1)throw Error('Каждый факт требует ссылки после |');return {id:'f'+(index+1),text:line.slice(0,split).trim(),url:line.slice(split+1).trim()};});const shots=snapshot.assets.filter(a=>selected.includes(a.id)).map(a=>({asset_id:a.id,...(shotNotes[a.id]||{start:0,end:a.kind==='video'?Math.min(10,a.duration):5,evidence:''})}));void run('plan',{topic:query,language:profile==='oleh-ru'?'ru':'en',project_id:projectId,facts,shots});}catch(e){setError(e instanceof Error?e.message:'Проверьте факты.');}}}>Подготовить сценарное предложение</button>
++      {snapshot.jobs.filter(j=>j.kind==='plan'&&j.status==='ready').map(job=>{const result=job.result as {digest:string;profile:'oleh-ru'|'oleh-en';proposal:{title:string;scenes:{text:string;asset_id:string;source_start:number;source_end:number;evidence:string}[]}};if(!result.proposal?.scenes)return null;return <article key={job.id} className="border border-border p-2 space-y-2"><h4>{result.proposal.title}</h4>{result.proposal.scenes.map((s,i)=><p key={i} className="text-xs">{s.text}<br/>{s.source_start}–{s.source_end} с · {s.evidence}</p>)}<button className={button} onClick={()=>{setPlanning({id:job.id,digest:result.digest});setParent(null);setTitle(result.proposal.title);setScript(result.proposal.scenes.map(s=>s.text).join('\n\n'));setProfile(result.profile);setSelected(Array.from(new Set(result.proposal.scenes.map(s=>s.asset_id))));setTab('story');}}>Редактировать перед озвучкой</button></article>;})}
 +    </div>}
 +    {tab === "batch" && <div className="space-y-3">
 +      <label className="block">Темы · одна на строку<textarea aria-label="Пакет тем" rows={9} className={control} value={topics} onChange={e => setTopics(e.target.value)} /></label>
@@ -762,7 +903,7 @@ index 0000000..65bdce9
 +    {tab === "review" && <div className="space-y-3">
 +      <p>Готовые черновики для просмотра в Canvas.</p><button className={button} onClick={() => void api.openCanvas().catch(() => setError("Не удалось открыть Canvas на этом Mac."))}>Открыть Canvas на Mac</button><p className="text-xs text-text-secondary">В Canvas можно просмотреть ролик, сохранить замечание и передать тестовый черновик в Hub. Доступ к копии MP4 разрешается отдельно. Просмотр и принятие черновика не разрешают публикацию.</p>
 +      {snapshot.stories.map(item => <button key={item.id} className={`${button} w-full text-left`} onClick={() => setStory(item)}>{item.title} · версия {item.revision} · {Math.round(item.duration)} с</button>)}
-+      {story && <div className="space-y-2"><p>{story.title}</p><p className="text-xs">Ожидает согласования · {story.artifact_sha256.slice(0, 12)}</p>{url && <video src={url} controls preload="metadata" className="w-full max-h-72 bg-black" />}<button className={button} disabled={!blob || busy} onClick={() => void save()}>Сохранить MP4…</button><button className={button} disabled={!blob || busy || story.project_id !== projectId} onClick={() => void addStory()}>Добавить ролик на таймлайн</button><button className={button} disabled={busy} onClick={() => void exportCard()}>Экспорт карточки Canvas…</button><button className={button} onClick={() => {setParent(story); setTitle(story.title); setScript(story.script); setProfile(story.profile); setSelected(Array.from(new Set(story.scenes.map(scene => scene.asset_id)))); setTab("story");}}>Править сценарий / новая версия</button></div>}
++      {story && <div className="space-y-2"><p>{story.title}</p><p className="text-xs">Ожидает согласования · {story.artifact_sha256.slice(0, 12)}</p>{url && <video src={url} controls preload="metadata" className="w-full max-h-72 bg-black" />}<button className={button} disabled={!blob || busy} onClick={() => void save()}>Сохранить MP4…</button><button className={button} disabled={!blob || busy || story.project_id !== projectId} onClick={() => void addStory()}>Добавить ролик на таймлайн</button><button className={button} disabled={busy || story.project_id !== projectId} onClick={() => void addEditable()}>Добавить отдельные дорожки</button><button className={button} disabled={busy} onClick={() => void exportCard()}>Экспорт карточки Canvas…</button><button className={button} onClick={() => {setPlanning(null); setParent(story); setTitle(story.title); setScript(story.script); setProfile(story.profile); setSelected(Array.from(new Set(story.scenes.map(scene => scene.asset_id)))); setTab("story");}}>Править сценарий / новая версия</button></div>}
 +    </div>}
 +    {snapshot.jobs.length > 0 && <div className="space-y-2 border-t border-border pt-3"><p className="font-semibold">Задания</p>{snapshot.jobs.slice(0, 6).map(job => <div key={job.id} className="space-y-1"><p className="text-xs">{job.phase} · {Math.round(job.progress * 100)}%</p>{job.error && <p className="text-xs text-red-400">{job.error}</p>}{!["ready", "failed", "cancelled"].includes(job.status) && <button className={button} onClick={() => void api.cancel(job.id).then(refresh).catch(() => setError("Не удалось остановить задачу."))}>Остановить</button>}</div>)}</div>}
 +    {error && <p role="alert" className="text-red-400 text-xs">{error}</p>}
@@ -1600,27 +1741,275 @@ index 0000000..fa7d131
 +  } finally { history.endGroup(); }
 +  store.setState({ project: { ...copy, modifiedAt: Date.now() } });
 +}
+diff --git a/apps/web/src/components/editor/inspector/workspace-editable.test.ts b/apps/web/src/components/editor/inspector/workspace-editable.test.ts
+new file mode 100644
+index 0000000..07565f1
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/workspace-editable.test.ts
+@@ -0,0 +1,39 @@
++import {beforeEach,describe,it,expect,vi} from 'vitest';
++import {ActionExecutor} from '@openreel/core';
++import {addEditableWorkspaceStory} from './workspace-editable';
++import type {EditableWorkspaceStory,MediaWorkspaceBridge} from '../../../types/global';
++const mock=vi.hoisted(()=>({state:{} as any,loadTextClips:vi.fn()}));
++vi.mock('../../../stores/engine-store',()=>({useEngineStore:{getState:()=>({getTitleEngine:()=>({loadTextClips:mock.loadTextClips})})}}));
++vi.mock('../../../stores/project-store',()=>({useProjectStore:{getState:()=>mock.state,setState:(v:any)=>Object.assign(mock.state,v)}}));
++const story:EditableWorkspaceStory={id:'11111111-1111-4111-8111-111111111111',root_id:'11111111-1111-4111-8111-111111111111',revision:1,project_id:'p',title:'Test',script:'A\n\nB',profile:'oleh-en',artifact_sha256:'a'.repeat(64),digest:'b'.repeat(64),duration:9,created_at:'now',fps:30,durationInFrames:270,scenes:[{id:'one',asset_id:'22222222-2222-4222-8222-222222222222',from:0,durationInFrames:90,kind:'image',sourceDuration:0,title:'First'},{id:'two',asset_id:'33333333-3333-4333-8333-333333333333',from:90,durationInFrames:90,kind:'video',sourceDuration:20,source_start:5,source_end:7,title:'Second'}],captions:[{start:0,end:2,text:'Hello'},{start:3,end:5,text:'World'}]};
++let api:MediaWorkspaceBridge;
++beforeEach(()=>{
++ mock.loadTextClips.mockClear();
++ mock.state={project:{id:'p',name:'Test',createdAt:0,modifiedAt:0,settings:{width:1080,height:1920,frameRate:30,sampleRate:48000,channels:2},timeline:{duration:0,markers:[],subtitles:[],tracks:[]},mediaLibrary:{items:[]}},actionExecutor:new ActionExecutor()};
++ mock.state.importMedia=vi.fn(async(file:File)=>{const id='media-'+file.name;mock.state.project={...mock.state.project,mediaLibrary:{items:[...mock.state.project.mediaLibrary.items,{id,name:file.name,type:file.type.startsWith('audio')?'audio':file.type.startsWith('video')?'video':'image',metadata:{duration:20,width:1920,height:1080}}]}};return {success:true,actionId:id};});
++ api={file:vi.fn(async()=>new ArrayBuffer(4)),narration:vi.fn(async()=>new ArrayBuffer(4))} as unknown as MediaWorkspaceBridge;
++});
++describe('editable workspace using real core history',()=>{
++ it('keeps scene ranges, separate audio and captions, exact group undo/redo and idempotence',async()=>{
++  await addEditableWorkspaceStory(story,api);const p=mock.state.project;
++  expect(p.timeline.tracks).toHaveLength(4);
++  const scenes=p.timeline.tracks.find((t:any)=>t.name==='Astel · сцены');expect(scenes.muted).toBe(true);expect(scenes.clips).toHaveLength(3);
++  expect(p.timeline.tracks.findIndex((t:any)=>t.name==='Astel · заголовки')).toBeLessThan(p.timeline.tracks.indexOf(scenes));
++  expect(p.timeline.tracks.findIndex((t:any)=>t.name==='Astel · субтитры')).toBeLessThan(p.timeline.tracks.indexOf(scenes));
++  expect(scenes.clips.slice(1).map((c:any)=>[c.startTime,c.duration,c.inPoint,c.outPoint])).toEqual([[3,2,5,7],[5,1,5,6]]);
++  expect(p.textClips.filter((c:any)=>['Hello','World'].includes(c.text))).toHaveLength(2);
++  expect(mock.loadTextClips).toHaveBeenCalledWith(p.textClips);expect(p.timeline.duration).toBe(9);
++  expect(p.timeline.tracks.find((t:any)=>t.type==='audio').clips[0].duration).toBe(6);
++  await addEditableWorkspaceStory(story,api);expect(mock.state.importMedia).toHaveBeenCalledTimes(3);
++  await mock.state.actionExecutor.undo(p);expect(p.timeline.tracks).toHaveLength(0);expect(p.textClips??[]).toHaveLength(0);
++  await mock.state.actionExecutor.redo(p);expect(p.timeline.tracks).toHaveLength(4);expect(p.textClips).toHaveLength(5);
++ });
++ it('refuses wrong project and a project switch during decode',async()=>{
++  mock.state.project.id='other';await expect(addEditableWorkspaceStory(story,api)).rejects.toThrow('проект');expect(api.file).not.toHaveBeenCalled();
++  mock.state.project.id='p';vi.mocked(api.file).mockImplementation(async()=>{mock.state.project={...mock.state.project,id:'other'};return new ArrayBuffer(4);});await expect(addEditableWorkspaceStory(story,api)).rejects.toThrow('проект');expect(mock.state.project.timeline.tracks).toHaveLength(0);
++ });
++ it('preserves manual edits during asynchronous track construction',async()=>{
++  const original=ActionExecutor.prototype.execute;const spy=vi.spyOn(ActionExecutor.prototype,'execute').mockImplementation(async function(this:ActionExecutor,...args:Parameters<ActionExecutor['execute']>){const r=await original.apply(this,args);mock.state.project={...mock.state.project,modifiedAt:123};return r;});
++  await expect(addEditableWorkspaceStory(story,api)).rejects.toThrow('Проект изменился');expect(mock.state.project.timeline.tracks).toHaveLength(0);spy.mockRestore();
++ });
++});
+diff --git a/apps/web/src/components/editor/inspector/workspace-editable.ts b/apps/web/src/components/editor/inspector/workspace-editable.ts
+new file mode 100644
+index 0000000..6a74fb0
+--- /dev/null
++++ b/apps/web/src/components/editor/inspector/workspace-editable.ts
+@@ -0,0 +1,70 @@
++import {v4 as uuid,v5 as stableId} from 'uuid';
++import {ActionExecutor,DEFAULT_TEXT_STYLE,DEFAULT_TEXT_TRANSFORM,calculateProjectDuration} from '@openreel/core';
++import type {EditableWorkspaceStory,MediaWorkspaceBridge} from '../../../types/global';
++import {useProjectStore} from '../../../stores/project-store';
++import {cloneProjectForEdit} from '../../../stores/project/clone-project-for-edit';
++import {useEngineStore} from '../../../stores/engine-store';
++
++function wrapText(value:string,fontSize:number){
++  const width=Math.max(12,Math.floor(900/(fontSize*.58)));
++  return value.split('\n').map(paragraph=>{const lines:string[]=[];let line='';for(const word of paragraph.split(/\s+/)){if(line&&line.length+1+word.length>width){lines.push(line);line=word;}else line+=(line?' ':'')+word;}if(line)lines.push(line);return lines.join('\n');}).join('\n');
++}
++
++/** Native source tracks: visual equivalence with the flattened Remotion export
++ * is deliberately not claimed. Scene timings and narration bytes are exact. */
++export async function addEditableWorkspaceStory(story:EditableWorkspaceStory,api:MediaWorkspaceBridge):Promise<void>{
++  const store=useProjectStore;
++  const check=()=>{if(store.getState().project.id!==story.project_id)throw Error('Откройте проект этой истории.');};
++  check();
++  if(story.scenes.length<1||story.scenes.length>12||!Number.isFinite(story.fps)||story.fps<=0)throw Error('Некорректная история.');
++  const trackId=(kind:string)=>stableId(story.digest+':'+kind,story.id);
++  if(store.getState().project.timeline.tracks.some(t=>t.id===trackId('scenes')))return;
++  const media=new Map<string,string>();
++  const importFile=async(name:string,bytes:()=>Promise<ArrayBuffer>,mime:string)=>{
++    let id=store.getState().project.mediaLibrary.items.find(m=>m.name===name)?.id;
++    if(!id){const data=await bytes();check();const result=await store.getState().importMedia(new File([data],name,{type:mime}));check();if(!result.success||!result.actionId)throw Error('Не удалось импортировать исходник.');id=result.actionId;}
++    return id;
++  };
++  for(const scene of story.scenes){if(!media.has(scene.asset_id))media.set(scene.asset_id,await importFile(`Astel-${scene.asset_id}.${scene.kind==='video'?'mp4':'jpg'}`,()=>api.file(scene.asset_id),scene.kind==='video'?'video/mp4':'image/jpeg'));}
++  const narrationId=await importFile(`Astel-narration-${story.id}.wav`,()=>api.narration(story.id),'audio/wav');
++  check();const {project,actionExecutor}=store.getState();
++  if(Math.abs(project.settings.width/project.settings.height-9/16)>.01)throw Error('Для этой истории установите вертикальный формат проекта 9:16. Исходники сохранены в медиа.');
++  const copy=cloneProjectForEdit(project),scratch=new ActionExecutor();
++  const run=async(type:string,params:Record<string,unknown>)=>{const result=await scratch.execute({type,id:uuid(),timestamp:Date.now(),params},copy);if(!result.success)throw Error('Не удалось построить редактируемую дорожку: '+type);};
++  const offset=Math.max(0,...project.timeline.tracks.flatMap(t=>t.clips.map(c=>c.startTime+c.duration)),...(project.textClips??[]).map(c=>c.startTime+c.duration));
++  // OpenReel composites lower track indices in front. Insert each new layer at
++  // zero so captions/titles sit above source video, rather than behind it.
++  for(const [kind,trackType,name] of [['scenes','video','Astel · сцены'],['narration','audio','Astel · озвучка'],['titles','text','Astel · заголовки'],['captions','text','Astel · субтитры']] as const)await run('track/add',{trackId:trackId(kind),trackType,name,position:0});
++  await run('track/mute',{trackId:trackId('scenes'),muted:true});
++  const text=async(id:string,kind:string,value:string,start:number,duration:number,y:number,fontSize:number)=>run('text/create',{clip:{id:stableId(story.digest+':'+id,story.id),trackId:trackId(kind),startTime:offset+start,duration,text:wrapText(value,fontSize),style:{...DEFAULT_TEXT_STYLE,fontFamily:'Arial',fontSize,color:'#FFFCEF',strokeWidth:3},transform:{...DEFAULT_TEXT_TRANSFORM,position:{x:.5,y}},keyframes:[]}});
++  for(const scene of story.scenes){
++    const duration=scene.durationInFrames/story.fps,start=scene.from/story.fps;
++    const sourceStart=scene.source_start??0,sourceEnd=scene.source_end??scene.sourceDuration;
++    const range=scene.kind==='video'?sourceEnd-sourceStart:duration;
++    if(!Number.isFinite(duration)||duration<=0||!Number.isFinite(range)||range<=0||range<.05)throw Error('Некорректная длина сцены.');
++    let cursor=0,index=0;
++    while(cursor<duration-.000001){
++      if(index>120)throw Error('Слишком много повторов короткого фрагмента.');
++      const part=Math.min(range,duration-cursor),clipId=stableId(story.digest+':'+scene.id+':'+index++,story.id);
++      await run('clip/add',{clipId,trackId:trackId('scenes'),mediaId:media.get(scene.asset_id),startTime:offset+start+cursor,duration:part});
++      if(scene.kind==='video')await run('clip/trim',{clipId,inPoint:sourceStart,outPoint:sourceStart+part});
++      await run('transform/update',{clipId,transform:{fitMode:'cover'}});
++      if(scene.kind==='image'&&story.style?.settings.image_motion!=='static')for(const [time,value] of [[0,1.01],[part,1.055]])await run('keyframe/add',{clipId,property:'scale',time,value:{x:value,y:value},easing:'linear'});
++      cursor+=part;
++    }
++    if(story.style?.settings.title_mode!=='none')await text(scene.id+'-title','titles',scene.title,start,duration,.18,72);
++  }
++  const end=story.scenes.at(-1)!;const narrationEnd=(end.from+end.durationInFrames)/story.fps;
++  await run('clip/add',{clipId:stableId(story.digest+':audio',story.id),trackId:trackId('narration'),mediaId:narrationId,startTime:offset,duration:narrationEnd});
++  for(const [index,cue] of story.captions.entries())if(Number.isFinite(cue.start)&&Number.isFinite(cue.end)&&cue.end>cue.start&&cue.start>=0&&cue.start<narrationEnd)await text('caption-'+index,'captions',cue.text,cue.start,Math.min(cue.end,narrationEnd)-cue.start,.84,story.style?.settings.caption_size??52);
++  await text('credits','titles',story.title+'\nИсточники: карточка Canvas / SOURCES.md',narrationEnd,3,.5,56);
++  check();if(store.getState().project!==project)throw Error('Проект изменился во время подготовки. Повторите импорт.');
++  const history=actionExecutor.getHistory();history.beginGroup('Add editable Astel story');
++  try{for(const entry of scratch.getHistory().getHistoryEntries())history.push(entry.action,entry.inverseAction);}finally{history.endGroup();}
++  const next={...copy,timeline:{...copy.timeline,duration:calculateProjectDuration(copy)},modifiedAt:Date.now()};
++  // Overlay engines cache their own clips. This matches the store's normal
++  // overlay synchronization. Auto-save subscribers run during setState, so
++  // the engine must already reflect the committed project at that boundary.
++  useEngineStore.getState().getTitleEngine()?.loadTextClips(next.textClips??[]);
++  store.setState({project:next});
++}
+diff --git a/apps/web/src/services/agent/mcp-listener.test.ts b/apps/web/src/services/agent/mcp-listener.test.ts
+index 3fe836f..8d607c8 100644
+--- a/apps/web/src/services/agent/mcp-listener.test.ts
++++ b/apps/web/src/services/agent/mcp-listener.test.ts
+@@ -52,6 +52,11 @@ vi.mock("../../stores/ui-store", () => ({
+ import { handleMcpBridgeRequest } from "./mcp-listener";
+ 
+ describe("handleMcpBridgeRequest", () => {
++  it('workspace mutations honor trusted-local confirmation before any workspace operation',async()=>{
++    h.autoAllow=false;const blocked=await handleMcpBridgeRequest({callId:'test',kind:'callTool',name:'astel_workspace_authorize',args:{}});
++    expect((blocked.result as any).error.code).toBe('CONFIRMATION_REQUIRED');
++    h.autoAllow=true;const allowed=await handleMcpBridgeRequest({callId:'test',kind:'callTool',name:'astel_workspace_authorize',args:{}});expect((allowed.result as any).ok).toBe(true);
++  });
+   beforeEach(() => {
+     vi.clearAllMocks();
+     h.isDestructive.mockReturnValue(false);
+diff --git a/apps/web/src/services/agent/mcp-listener.ts b/apps/web/src/services/agent/mcp-listener.ts
+index b319c49..cff7845 100644
+--- a/apps/web/src/services/agent/mcp-listener.ts
++++ b/apps/web/src/services/agent/mcp-listener.ts
+@@ -12,6 +12,7 @@ import { useSettingsStore } from "../../stores/settings-store";
+ import { useMotionStore } from "../../motion/stores/motion-store";
+ import { useUIStore } from "../../stores/ui-store";
+ import { resolveMotionCreatorPreviewTime } from "../../motion/composition-selection";
++import {addEditableWorkspaceStory} from '../../components/editor/inspector/workspace-editable';
+ 
+ export interface McpBridgeRequest {
+   readonly callId: string;
+@@ -167,6 +168,15 @@ export async function handleMcpBridgeRequest(
+       if (!name) return { ok: false, error: "Missing tool name" };
+ 
+       const autoAllow = useSettingsStore.getState().mcpAutoAllowTrustedLocal;
++      if(name==='astel_workspace_authorize'||name==='astel_workspace_add_editable'){
++        if(!autoAllow)return {ok:true,result:{ok:false,summary:'Trusted local confirmation required',error:{code:'CONFIRMATION_REQUIRED',message:'Enable Trusted local in Settings → MCP before workspace mutations.'}}};
++        if(name==='astel_workspace_authorize')return {ok:true,result:{ok:true,summary:'Trusted local workspace action allowed'}};
++        const args=req.args??{},id=args.id;
++        if(Object.keys(args).length!==1||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id)||!window.openreel?.mediaWorkspace)throw Error('Invalid editable story request');
++        const api=window.openreel.mediaWorkspace;const story=await api.editable(id);
++        await runExclusive(()=>addEditableWorkspaceStory(story,api));
++        return {ok:true,result:{ok:true,summary:'Editable Astel story added',data:{id,digest:story.digest,project_id:story.project_id}}};
++      }
+       if (!autoAllow && (isDestructive(name) || isExpensive(name))) {
+         const blocked: ToolResult = {
+           ok: false,
+diff --git a/apps/web/src/stores/project/history-overlay-save.test.ts b/apps/web/src/stores/project/history-overlay-save.test.ts
+new file mode 100644
+index 0000000..a2748be
+--- /dev/null
++++ b/apps/web/src/stores/project/history-overlay-save.test.ts
+@@ -0,0 +1,21 @@
++import {describe,it,expect,vi} from 'vitest';
++import {ActionExecutor} from '@openreel/core';
++import {createHistorySlice} from './history-slice';
++
++describe('overlay history persistence boundary',()=>{
++ it('synchronizes the engine before subscribers snapshot undo and redo',async()=>{
++  const executor=new ActionExecutor();const project:any={id:'p',timeline:{duration:0,tracks:[],markers:[],subtitles:[]},mediaLibrary:{items:[]},textClips:[]};
++  executor.getHistory().beginGroup('Overlay import');
++  await executor.execute({id:'add-track',type:'track/add',timestamp:Date.now(),params:{trackId:'text',trackType:'text'}},project);
++  await executor.execute({id:'add-text',type:'text/create',timestamp:Date.now(),params:{clip:{id:'t',trackId:'text',startTime:0,duration:2,text:'Hello',style:{},transform:{},keyframes:[]}}},project);
++  executor.getHistory().endGroup();
++  project.timeline.duration=2;
++  const state:any={project,actionExecutor:executor,actionHistory:executor.getHistory(),clipUndoStack:[],clipRedoStack:[],templateUndoStack:[],templateRedoStack:[],redoJournal:[]};
++  let engine=[...project.textClips];const saves:any[]=[];
++  const set=(update:any)=>{Object.assign(state,update);saves.push({...state.project,textClips:[...engine]});};
++  const deps:any={syncOverlayEnginesFromProject:()=>{engine=[...(state.project.textClips??[])];},applyClipDataSnapshot:vi.fn(),syncProjectEffectsBridge:vi.fn(),syncProjectTransitionsBridge:vi.fn(),getEditingTemplateApplicationState:vi.fn(),removeEditingTemplateApplicationStateFromProject:vi.fn(),restoreEditingTemplateApplicationState:vi.fn()};
++  const history=createHistorySlice(set,()=>state,deps);
++  expect((await history.undo()).success).toBe(true);expect(state.project.textClips).toHaveLength(0);expect(saves.at(-1).textClips).toHaveLength(0);expect(state.project.timeline.duration).toBe(0);
++  expect((await history.redo()).success).toBe(true);expect(state.project.textClips).toHaveLength(1);expect(saves.at(-1).textClips).toHaveLength(1);expect(state.project.timeline.duration).toBe(2);
++ });
++});
+diff --git a/apps/web/src/stores/project/history-slice.ts b/apps/web/src/stores/project/history-slice.ts
+index 73a8d46..1e1209f 100644
+--- a/apps/web/src/stores/project/history-slice.ts
++++ b/apps/web/src/stores/project/history-slice.ts
+@@ -6,7 +6,7 @@ import type {
+   SVGClip,
+   StickerClip,
+ } from "@openreel/core";
+-import { getTrackItems } from "@openreel/core";
++import { getTrackItems, calculateProjectDuration } from "@openreel/core";
+ import type { ProjectState } from "../project-store";
+ import type { ProjectStoreHelpers } from "./store-helpers";
+ import type {
+@@ -254,13 +254,15 @@ export function createHistorySlice(
+ 
+       const result = await actionExecutor.undo(project);
+       if (result.success) {
++        // Auto-save subscribers snapshot overlay engines synchronously in set.
++        // Refresh them first so undone overlays cannot return after reopening.
++        syncOverlayEnginesFromProject();
+         set({
+-          project: { ...project, modifiedAt: Date.now() },
++          project: { ...project, timeline:{...project.timeline,duration:calculateProjectDuration(project)}, modifiedAt: Date.now() },
+           redoJournal: [...get().redoJournal, "action"],
+         });
+         syncProjectEffectsBridge(get().project, get().project);
+         syncProjectTransitionsBridge(get().project, get().project);
+-        syncOverlayEnginesFromProject();
+       }
+       return result;
+     },
+@@ -466,13 +468,13 @@ export function createHistorySlice(
+ 
+       const result = await actionExecutor.redo(project);
+       if (result.success) {
++        syncOverlayEnginesFromProject();
+         set({
+-          project: { ...project, modifiedAt: Date.now() },
++          project: { ...project, timeline:{...project.timeline,duration:calculateProjectDuration(project)}, modifiedAt: Date.now() },
+           redoJournal: nextJournal,
+         });
+         syncProjectEffectsBridge(get().project, get().project);
+         syncProjectTransitionsBridge(get().project, get().project);
+-        syncOverlayEnginesFromProject();
+       }
+       return result;
+     },
 diff --git a/apps/web/src/types/global.d.ts b/apps/web/src/types/global.d.ts
-index a968c2c..a25f70f 100644
+index a968c2c..2a0f8b3 100644
 --- a/apps/web/src/types/global.d.ts
 +++ b/apps/web/src/types/global.d.ts
-@@ -1,4 +1,36 @@
+@@ -1,4 +1,45 @@
  export {};
 +export interface WorkspaceAsset {id: string; title: string; kind: "video" | "image"; width: number; height: number; duration: number; license: string; sha256: string}
 +export interface WorkspaceCandidate {id: string; title: string; provider: string; author: string; license: string | null; url: string | null; downloadable: boolean}
 +export interface WorkspaceStory {script: string; profile: "oleh-ru" | "oleh-en"; scenes: {asset_id: string}[]; root_id?: string; id: string; revision: number; title: string; duration: number; project_id: string; artifact_sha256: string; digest: string; created_at: string}
 +export interface WorkspaceJob {id: string; kind: string; status: string; progress: number; phase: string; error: string | null; result: Record<string, unknown>}
 +export interface WorkspaceSnapshot {
++  planning?: {enabled:boolean;reason:string};
 +  jobs: WorkspaceJob[]; searches: {id: string; query: string; candidates: WorkspaceCandidate[]; errors: {provider: string; message: string}[]}[];
 +  assets: WorkspaceAsset[]; stories: WorkspaceStory[]; reviews: unknown[]; disk_free_bytes: number; publishing_enabled: false;
 +}
-+export interface WorkspaceSubmit {id: string; kind: "search" | "batch" | "acquire" | "story"; payload: Record<string, unknown>}
++export interface WorkspaceSubmit {id: string; kind: "search" | "batch" | "acquire" | "story" | 'plan'; payload: Record<string, unknown>}
 +export interface MediaWorkspaceBridge {
++  editable(id: string): Promise<EditableWorkspaceStory>;
++  narration(id: string): Promise<ArrayBuffer>;
 +  openCanvas(): Promise<void>;
 +  card(id: string): Promise<Record<string, unknown>>;
 +  list(): Promise<WorkspaceSnapshot>; submit(request: WorkspaceSubmit): Promise<WorkspaceJob>;
 +  resume(id: string): Promise<WorkspaceJob>; cancel(id: string): Promise<WorkspaceJob>;
 +  file(id: string): Promise<ArrayBuffer>; video(id: string): Promise<ArrayBuffer>; importLocal(): Promise<WorkspaceJob | null>;
++}
++export interface EditableWorkspaceStory extends Omit<WorkspaceStory,'scenes'> {
++  fps: number; durationInFrames: number;
++  scenes: {id:string;asset_id:string;from:number;durationInFrames:number;kind:'image'|'video';sourceDuration:number;title:string;source_start?:number;source_end?:number}[];
++  captions: {start:number;end:number;text:string}[];
++  style?: {settings:{image_motion:'gentle'|'static';title_mode:'scene'|'none';caption_size:number}};
 +}
 +
 +export interface StoryPackage {id: string; name: string; description: string; duration: number; revision: string}
@@ -1641,7 +2030,7 @@ index a968c2c..a25f70f 100644
  
  export interface OpenReelHardwareInfo {
    cpu: { model: string; physicalCores: number; logicalCores: number };
-@@ -170,10 +202,49 @@ export type OpenReelUpdaterStatus =
+@@ -170,10 +211,49 @@ export type OpenReelUpdaterStatus =
    | { state: "downloaded"; version: string }
    | { state: "error"; message: string };
  

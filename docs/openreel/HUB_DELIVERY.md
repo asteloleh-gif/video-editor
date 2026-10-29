@@ -1,44 +1,40 @@
-# OpenReel → Canvas → существующий Hub
+# OpenReel → Canvas → existing Hub
 
-Проверка 28 октября 2026, ветка `integration/astel-media-canvas-stack`.
+Current acceptance: 28 October 2026. Branch `integration/astel-media-canvas-stack`. The two explicitly approved existing Railway services are deployed; no new service or key was created. Production publishing configuration is unchanged; paid planner is OFF.
 
-Установлены локальная форма передачи **тестового черновика**, постоянный журнал запросов, восстановление прежнего Drive-входа и чтение реальной очереди Hub. Реальный проход до simulation DRAFT подтверждён: владелец завершил прежний Drive login, исходное задание продолжено, точный MP4 загружен и проверен, Hub принял план, та же карточка открыта в Canvas. Отдельное разрешение владельца на чтение этой копии применено через Canvas; анонимная загрузка всех bytes и SHA-256 прошла. Публикация не включалась.
+## Verified path
 
-## Использование на Mac
+The existing warehouse story (41.024 seconds) was uploaded once to its private delivery copy. The owner separately authorized link-reader access only to that final MP4. RAW, voice references and source folders remain private. The deployed Hub then fetched all **25,369,940 bytes**, `video/mp4`, and matched SHA-256 `bf339a949a9c56e38fd47ebbc1e062581856ac1cc290b8a48a8d51f7b5a39123` (latest proof `2026-10-29T00:54:08.014Z`). This is actual server execution, not the earlier Mac compatibility probe.
 
-1. OpenReel Astel → AI Generate → Материалы и истории → Для Canvas → **Открыть Canvas на Mac**. Открывается `http://127.0.0.1:17531/`. Кнопка проверена в установленном приложении.
-2. В «Черновиках с Mac» выбрать точную версию ролика. Указать существующий Instagram-аккаунт, подпись и время тестового слота. **Передать тестовый черновик в Hub** ставит durable задание; режим принудительно `simulation`.
-3. При ошибке Drive нажать **Повторно войти в Google Drive**, затем появившуюся ссылку. Используется прежний локальный Google OAuth client и тот же scope `drive.file`, без новых ключей. Завершить вход в Google самостоятельно; предупреждение о непроверенном тестовом приложении агент не обходит. Вход живёт десять минут; после истечения кнопку можно нажать заново.
-4. После входа — **Продолжить передачу** у существующего задания. Не создавать новый запрос ради повтора. Сначала загружается приватная копия окончательного MP4 в отдельную app-owned папку **Astel Video Delivery**. Исходная папка материалов и destination ASAP не меняются.
-5. После удалённого hash/size/type readback выполняются Hub `preview → submit → status`. Успех показывается только после совпадения plan ID, input digest и режима `simulation`, без approval, attempts или receipt. Это Hub `DRAFT`; приватный файл ещё недоступен анонимному серверному исполнителю.
-6. При необходимости владелец отдельно отмечает согласие и нажимает **Разрешить чтение этой копии MP4**. Доступ получает любой обладатель ссылки, включая сервер Hub; открывается только проверенный финальный MP4 с синтезированным голосом, `reader`, `allowFileDiscovery=false`. Папка, RAW и записи голоса не открываются. На тестовой копии эта операция выполнена через Canvas после отдельного явного разрешения владельца. Статус означает проверенное разрешение Drive, а не завершённую загрузку файла самим сервером Hub.
-7. **Очередь Hub** читает реальные inbox/status/metrics существующего проекта `copilot`. Проверено чтение прежних заданий и новой карточки «Как посылка проходит склад»; прежние задания интеграция не меняла. Согласование публикации остаётся в действующем защищённом канале владельца. Здесь нет approve/review/schedule/publish/cancel маршрутов.
+Plan `b646292fa99901255470464af0ac2508ae37604a9ec100edbf70aae33abea2fa` remains `simulation`, now `NEEDS_APPROVAL`. Independent Hub MCP status confirmed publication approval **false**, delivery **DRAFT**, attempts **0**, receipt absent. `request_review` sent it for owner review; no approve/schedule/publish operation was called.
 
-После изменения сценария или MP4 требуется новая версия истории. Изменение подписи, аккаунта или времени создаёт новую delivery revision при сохранении source story revision. Локальное «Принять черновик» является редакторским решением; оно не одобряет публикацию.
+| Service | Delivered source | Deployment |
+|---|---|---|
+| Existing lazy-distribution Hub | [PR #10](https://github.com/asteloleh-gif/asteloleh-gif-astel-lazy-distribution/pull/10), `816b50d` | `030c59b8-2570-42a2-8f65-1729b7f44d90`, SUCCESS |
+| Existing astel-assistant Canvas | [PR #35](https://github.com/asteloleh-gif/astel-telegram/pull/35), `4c05a67` | `40a311e7-8463-4589-836c-2a692e20c09f`, SUCCESS |
 
-## Реализация
+The deployed Canvas JS matches the reviewed bundle byte-for-byte. Unauthenticated POST returns 401; signed-owner authorization and stale binding checks passed unit tests. A physical signed Telegram owner/phone session has **not** been tested. Local Canvas already displays the same real plan and full server verification.
 
-- `hub_delivery.py`: фиксированный существующий Hub origin, allowlist действий, только `copilot` и `simulation`. Операторский credential используется для preview/submit; отдельный status-only credential — для UI чтения. Даже если исходный credential имеет более широкие scopes, adapter не вызывает исполнительные действия.
-- `drive_delivery.py`: прежний `drive-work` grant, проверка аккаунта, отдельная приватная папка, заранее зарезервированные file IDs, resumable chunks, удалённый SHA-256/MD5 readback. Сохранённая upload session приватна и удаляется после readback. Повтор не создаёт новую копию. Ошибку доступа нельзя обойти переключением на другой аккаунт/папку.
-- `drive_authorization.py`: запускает существующий OAuth helper в отдельном процессе. В UI возвращается только локальный `/authorize` entry URL. Google callback, auth code, токены и секрет клиента не попадают в Canvas. Зависимость: прежний `~/Projects/asap-gta6-pipeline/src/video_editor/asap/google.py` и установленный Voicebox Python.
-- SQLite `hub_handoffs`: журнал binding `story + digest + MP4 hash + delivery revision + immutable input + deterministic plan ID`. Потеря submit reply сначала сверяется через status. Семантически одинаковый запрос с другим UUID также использует существующий binding. Уже отправленный запрос можно сверить после истечения тестового слота; новая отправка требует будущего времени.
-- Local Canvas: прежний приватный HTML не переписывается. Проверяемые hooks адаптируются при выдаче; Hub reader работает через фиксированные private backend endpoints. Токены остаются вне renderer. Cookie/Host/Origin/CSRF граница действует и на новые действия.
-- Просмотр Hub MP4 может использовать точную локальную копию по SHA-256 с явной подписью. Такое превью не доказывает доступ сервера к Drive. После выключения Mac оно недоступно.
+## Mac actions
 
-`availableUntil` — обещание сохранить копию минимум до указанного срока (тестовый слот + семь дней), не автоматически исполняемый TTL. Архивация/retention и серверное media preflight ещё требуют отдельной проверки. Права Drive можно отозвать вручную; сервер должен повторять media preflight перед реальной доставкой.
+1. OpenReel Astel → AI Generate → Материалы и истории → Для Canvas → **Открыть Canvas на Mac** (`http://127.0.0.1:17531/`).
+2. Choose the exact story revision. **Передать тестовый черновик в Hub** reserves one durable binding and creates only `simulation`. Reuse the existing request after a recoverable error.
+3. If needed, **Повторно войти в Google Drive** uses the existing local client/account and scope `drive.file`. The owner completes security warnings and Google login. **Продолжить передачу** resumes the same reserved file/job.
+4. Upload lands in a separate app-owned Astel Video Delivery folder. Remote metadata/hash/size readback precedes Hub preview/submit/status. Lost replies are reconciled before retry; an unknown outcome is not cancelled or silently hidden.
+5. Server fetching needs explicit owner consent for reader access to that copy. **Разрешить чтение этой копии MP4** uses reader/allowFileDiscovery=false; it never shares the whole folder. Current test copy already has the required consent/access.
+6. **Проверить весь MP4 на сервере** performs the bounded server fetch and binding/hash validation. **Передать на согласование в Canvas** requests review of that exact plan/digest. Editorial acceptance on Mac does not grant publication approval.
+7. Existing protected Canvas owner review uses the existing Hub. This integration does not approve, schedule or dispatch publication. A new MP4/script needs a new story revision; changed caption/account/slot gets a new delivery revision.
 
-## Проверки и границы
+## Contracts and credentials
 
-Python: **110 passed** в проверках workspace, Canvas, Hub/Drive, Voicebox, story jobs/pilot, discovery и OpenReel. Проверены потеря финального upload reply, потеря submit reply, повтор без дубликата, caption revision, stale digest, запрет live и исполнительных действий, точное согласие на file sharing, read-only HTTP proxy, CSRF и ограниченный loopback OAuth URL. Включены проверки против существующего JS-контракта Hub. Web typecheck/build, JS syntax и signed bundle verification прошли; прежние предупреждения upstream о browsers data/WASM/chunks остались.
+`hub_delivery.py` permits the fixed existing project/origin and simulation handoff only. `workspace_cloud.py` exposes bounded prepare/review/planning calls without owner approval credentials. Private operator and reader credentials stay in `~/.config/astel-distribution/`, never in HTML/JavaScript/Git. Google tokens, OAuth callback and auth code stay outside Canvas responses. The narrow existing Drive OAuth helper is reused; no destination switch or new grant is introduced.
 
-Реальный UI подтвердил восстановление входа, точный simulation DRAFT и отдельное разрешение на чтение MP4. Drive metadata SHA-256 совпал с исходником. Анонимные HEAD и GET вернули MP4 25 369 940 bytes; полный SHA-256 совпал. Существующий Hub `driveMediaProbe` прошёл при запуске на Mac. Это проверка совместимости, не запуск удалённого worker: deployed media fetch/preflight ещё не вызывался. Нет publication approval, scheduling, публикации, новых платных сервисов, production deployment или изменения publishing configuration.
+The Hub stores bounded video bindings/media proofs/feedback in the existing journal and rejects stale approval digests. New planner route is guarded by `VIDEO_PLANNER_ENABLED=false`; the local owner policy is also false. No real AI request was made. The Telegram BFF authenticates the signed owner before writes, uses its existing server-held owner credential and enforces the fixed project. It does not expose credentials to the client.
 
-Выполнено: тот же MP4 → Drive metadata hash → simulation DRAFT readback → независимый MCP status → та же карточка/видеопревью в реальной очереди → отдельное согласие владельца на доступ к копии → анонимный HEAD/GET и полный hash. Повтор того же UUID вернул прежний ready job и plan ID; в журнале ровно один binding. Подробности: [HUB_HANDOFF_VALIDATION_2026-10-28.json](HUB_HANDOFF_VALIDATION_2026-10-28.json). Следующий этап — размещённое согласование Canvas и отдельная проверка deployed media preflight до любой реальной доставки. Windows/Kevin остаётся Stage 2.
+Scoped checks: Hub/Radar 184 passed; Telegram 104 existing tests plus 2 new contract tests passed; Python workspace/story/voice/discovery/handoff 119 passed. Current native/UI/MCP evidence is in [STACK_VALIDATION_2026-10-28.json](STACK_VALIDATION_2026-10-28.json). [Earlier handoff evidence](HUB_HANDOFF_VALIDATION_2026-10-28.json) records the preceding DRAFT phase, before the approved cloud rollout.
 
-## Setup / rollback
+## Setup and rollback
 
-Повторно выполнить существующий `scripts/setup_media_workspace_mac.py --node /absolute/path/to/node --start-canvas`; он сохраняет private HTML/ZIP, SQLite и медиа, но отказывает во время активного worker. Существующие private credentials читаются из `~/.config/astel-distribution/`; их значения в repo/HTML/чат не копируются. На чистом Mac сначала требуется штатное подключение действующего Hub и Google client; этот installer не выпускает credentials и не меняет production.
+Re-run `scripts/setup_media_workspace_mac.py --node /absolute/path/to/node --cloud-planner off --start-canvas` to refresh the private Mac runtime; catalogue/media/owner HTML remain. This does not create Hub or Google credentials. Original OpenReel, accepted Amazon and `main` remain preserved.
 
-Установлено `~/Applications/OpenReel Astel.app`; предыдущая версия сохранена в `~/.local/share/astel-openreel-voicebox/builds/before-hub-20261028/OpenReel Astel.app`. Cumulative patch и upstream MIT notices включены в сборку. `/Applications/OpenReel.app`, принятый Amazon-пилот и `main` сохранены.
-
-Основания для Drive реализации: [resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads), [предварительные file IDs](https://developers.google.com/workspace/drive/api/guides/create-file), [поля checksum](https://developers.google.com/workspace/drive/api/reference/rest/v3/files), [права доступа](https://developers.google.com/workspace/drive/api/guides/manage-sharing). Hub contract проверен по существующему локальному исходному коду и текущему authenticated READ.
+Cloud rollback (only if needed): restore existing Hub source to `22a9ff9ce14a8f716aaf449d97fcdab8941b3191` on `review/unified-distribution-hub-20261024`, and Telegram source to `6d058c880718a5cdb0cf7e26c71ae94be36c5f14` on `review/distribution-fallback-20261024`; disable the new VIDEO_WORKSPACE_ENABLED flags. Keep `VIDEO_PLANNER_ENABLED=false`, all other variables and the existing `/data` volume. Do not replace the journal, rotate credentials or change publishing. Cloud rollback is documented, not exercised in production.

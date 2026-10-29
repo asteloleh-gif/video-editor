@@ -9,6 +9,25 @@ import pytest
 
 from video_editor.media_workspace import Workspace, MAX_PENDING_JOBS
 from video_editor import workspace_runtime as runtime
+
+def test_cancel_does_not_hide_a_remote_unknown_handoff_or_an_owned_child(tmp_path,monkeypatch):
+    import json,uuid
+    from video_editor.media_workspace import Workspace
+    from video_editor.hub_delivery import initialize
+    from video_editor.story_jobs import lock
+    service=Workspace(tmp_path);monkeypatch.setattr(service,'spawn',lambda _:None)
+    key=str(uuid.uuid4());service.submit({'id':key,'kind':'search','payload':{'query':'test','providers':['commons']}})
+    with lock(service.folder(key)/'run.lock',True):
+        assert service.cancel(key)['status']=='queued'
+        assert (service.folder(key)/'cancel').exists()
+    (service.folder(key)/'cancel').unlink()
+    initialize(service)
+    with service.db() as db:
+        db.execute('UPDATE jobs SET kind=?,payload=? WHERE id=?',('handoff',json.dumps({'story_id':key}),key))
+        db.execute('INSERT INTO hub_handoffs VALUES(?,?,?,?,?,?,?)',(key,key,key,1,'a'*64,json.dumps({'state':'remote_outcome_unconfirmed'}),'b'*64))
+    import pytest
+    with pytest.raises(ValueError,match='already have accepted'):service.cancel(key)
+    assert not (service.folder(key)/'cancel').exists() and service.status(key)['status']=='queued'
 from video_editor.story_jobs import digest, lock, write
 
 

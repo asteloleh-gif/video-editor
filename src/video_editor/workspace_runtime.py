@@ -57,7 +57,7 @@ def cache_plan(service, *, now=None):
                 unique.add(expected)
                 copy = folder / 'public' / expected
                 if copy.is_symlink() or not copy.is_file(): continue
-                if source['sha256'] != scene['asset_sha256'] or digest(copy) != source['sha256']: continue
+                if source['sha256'] != scene.get('media_sha256',scene['asset_sha256']) or digest(copy) != source['sha256']: continue
                 result.append({'job_id': row['id'], 'name': expected, 'asset_id': asset_id,
                                'sha256': source['sha256'], 'bytes': copy.stat().st_size})
         except (OSError, KeyError, TypeError, ValueError):
@@ -116,6 +116,8 @@ def restore_cache(service, job_id):
 
 
 def tick(service, *, maintenance=False):
+    from .workspace_discovery import schedule
+    schedule(service)
     free = shutil.disk_usage(service.home).free
     with service.db() as db:
         rows = db.execute("SELECT id,kind FROM jobs WHERE status IN ('queued','running') ORDER BY created_at,rowid LIMIT ?", (MAX_PENDING_JOBS + 1,)).fetchall()

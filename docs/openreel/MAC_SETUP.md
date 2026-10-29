@@ -1,6 +1,8 @@
 # Mac-first setup and MCP configuration
 
-This is an isolated local candidate. No production publishing/deployment setup is changed.
+Current installed workflow (28 October 2026): [media workspace setup](MEDIA_WORKSPACE.md) and [items 1–8](IMPLEMENTATION_1_TO_8.md). Candidate branch: `integration/astel-media-canvas-stack`; app: `~/Applications/OpenReel Astel.app`; local Canvas: `http://127.0.0.1:17531/`. Its MCP uses `~/.openreel/astel-voicebox-mcp-endpoint.json`, not the original app's descriptor. Installed stable stdio command: `~/.local/share/astel-media-workspace/bin/mcp`. Discovery returned 322 tools, including 11 workspace tools. Local READ/job/import and external ChatGPT project READ passed. Paid planning remains OFF. The two explicitly approved Hub/Telegram deployments are recorded separately; publishing is unchanged.
+
+The rest of this document preserves the initial source-integration setup and its original 311-tool baseline. For the packaged Astel workflow, use the current setup above.
 
 ## Checkout and install
 
